@@ -1,0 +1,25 @@
+name: Build APK (EAS)
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: expo/expo-github-action@v7
+        with:
+          expo-version: latest
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm ci
+      - name: EAS Build Android
+        env:
+          EAS_BUILD_USERNAME: ${{ secrets.EAS_BUILD_USERNAME }}
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          cd mobile
+          npx eas build -p android --non-interactive --profile production
