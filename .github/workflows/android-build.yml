@@ -1,0 +1,36 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm install
+
+      - name: Build Android APK
+        working-directory: mobile
+        run: eas build --platform android --local --output ../BRILHAH-APP.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: BRILHAH-APP
+          path: BRILHAH-APP.apk

@@ -1,0 +1,16 @@
+{
+  "cli": {
+    "version": ">= 3.0.0"
+  },
+  "build": {
+    "android": {
+      "workflow": "generic",
+      "buildType": "apk"
+    }
+  },
+  "submit": {
+    "android": {
+      "serviceAccountKeyPath": "./google-service-key.json"
+    }
+  }
+}
