@@ -1,3 +1,4 @@
+import { apiPost, apiGet } from "./services/api";
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
