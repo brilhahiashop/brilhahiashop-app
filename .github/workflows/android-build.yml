@@ -15,7 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     defaults:
       run:
@@ -47,11 +47,24 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build release APK and AAB
+      - name: Increase Gradle memory
+        run: |
+          printf "\norg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8\norg.gradle.parallel=false\norg.gradle.daemon=false\n" >> android/gradle.properties
+
+      - name: Build release APK
+        env:
+          NODE_ENV: production
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease bundleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --max-workers=2
+
+      - name: Build release AAB
+        env:
+          NODE_ENV: production
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon --max-workers=2
 
       - name: Collect release files
         run: |
