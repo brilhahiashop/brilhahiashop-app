@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK and AAB
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     defaults:
       run:
@@ -47,19 +47,23 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build release APK
+      - name: Build release APK and AAB
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
-      - name: Copy APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk ../BRILHAH-AI-Manager.apk
+      - name: Collect release files
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk ../BRILHAH-AI-Manager.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab ../BRILHAH-AI-Manager.aab
 
-      - name: Upload APK artifact
+      - name: Upload APK and AAB artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BRILHAH-AI-Manager-APK
-          path: BRILHAH-AI-Manager.apk
+          name: BRILHAH-AI-Manager-Android
+          path: |
+            BRILHAH-AI-Manager.apk
+            BRILHAH-AI-Manager.aab
           if-no-files-found: error
           retention-days: 14
