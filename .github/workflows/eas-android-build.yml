@@ -1,25 +1,10 @@
-name: Build APK (EAS)
+name: Optional EAS Cloud Build
+
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
-  build-android:
+  info:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: expo/expo-github-action@v7
-        with:
-          expo-version: latest
-      - name: Install dependencies
-        run: |
-          cd mobile
-          npm ci
-      - name: EAS Build Android
-        env:
-          EAS_BUILD_USERNAME: ${{ secrets.EAS_BUILD_USERNAME }}
-          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
-        run: |
-          cd mobile
-          npx eas build -p android --non-interactive --profile production
+      - run: echo "Use the GitHub-native APK workflow for production builds. EAS cloud build is optional."
