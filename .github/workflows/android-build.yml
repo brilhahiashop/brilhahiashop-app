@@ -2,9 +2,64 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-build.yml"
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: mobile
+
     steps:
-      - run: echo "Workflow temporarily paused while BRILHAH mobile build configuration is repaired."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mobile/package.json
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install JavaScript dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate Expo dependencies
+        run: npx expo install --check
+
+      - name: Generate Android native project
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Build release APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Copy APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk ../BRILHAH-AI-Manager.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BRILHAH-AI-Manager-APK
+          path: BRILHAH-AI-Manager.apk
+          if-no-files-found: error
+          retention-days: 14
