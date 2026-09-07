@@ -2,7 +2,7 @@
   "expo": {
     "name": "BRILHAH AI Manager",
     "slug": "brilhah-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "dark",
@@ -11,16 +11,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#07101d"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.brilhah.ia"
     },
     "android": {
       "package": "com.brilhah.ia",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#07101d"
