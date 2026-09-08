@@ -117,19 +117,26 @@ ${SOCIAL_UI}
 export default function App() {
   const webRef = useRef(null);
   const pendingAuthUrl = useRef(null);
+  const authRetryTimer = useRef(null);
+  const webReady = useRef(false);
   const [loadError, setLoadError] = useState(false);
+
+  const tryDeliverAuthCallback = () => {
+    const value = pendingAuthUrl.current;
+    if (!value || !webRef.current || !webReady.current) return;
+    const encoded = JSON.stringify(value);
+    webRef.current.injectJavaScript(
+      `if(window.__brilhahFinishGoogleOAuth){window.__brilhahFinishGoogleOAuth(${encoded});} true;`
+    );
+    if (authRetryTimer.current) clearTimeout(authRetryTimer.current);
+    authRetryTimer.current = setTimeout(tryDeliverAuthCallback, 700);
+  };
 
   const deliverAuthCallback = (url) => {
     const value = String(url || "");
     if (!value.startsWith("brilhah://auth/callback")) return;
     pendingAuthUrl.current = value;
-    if (webRef.current) {
-      const encoded = JSON.stringify(value);
-      webRef.current.injectJavaScript(
-        `window.__brilhahFinishGoogleOAuth && window.__brilhahFinishGoogleOAuth(${encoded}); true;`
-      );
-      pendingAuthUrl.current = null;
-    }
+    tryDeliverAuthCallback();
   };
 
   useEffect(() => {
@@ -137,12 +144,23 @@ export default function App() {
       if (url) deliverAuthCallback(url);
     }).catch(() => {});
     const sub = Linking.addEventListener("url", ({ url }) => deliverAuthCallback(url));
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      if (authRetryTimer.current) clearTimeout(authRetryTimer.current);
+    };
   }, []);
 
   const handleWebMessage = async ({ nativeEvent }) => {
     try {
       const msg = JSON.parse(nativeEvent.data || "{}");
+      if (msg?.type === "oauth-complete") {
+        pendingAuthUrl.current = null;
+        if (authRetryTimer.current) {
+          clearTimeout(authRetryTimer.current);
+          authRetryTimer.current = null;
+        }
+        return;
+      }
       if (msg?.type !== "open-external") return;
       const url = String(msg.url || "");
       const allowed =
@@ -180,14 +198,12 @@ export default function App() {
           )}
           injectedJavaScript={BRILHAH_UI}
           onLoadEnd={() => {
+            webReady.current = true;
             webRef.current?.injectJavaScript(BRILHAH_UI);
-            if (pendingAuthUrl.current) {
-              const encoded = JSON.stringify(pendingAuthUrl.current);
-              webRef.current?.injectJavaScript(
-                `window.__brilhahFinishGoogleOAuth && window.__brilhahFinishGoogleOAuth(${encoded}); true;`
-              );
-              pendingAuthUrl.current = null;
-            }
+            setTimeout(tryDeliverAuthCallback, 250);
+          }}
+          onLoadStart={() => {
+            webReady.current = false;
           }}
           onMessage={handleWebMessage}
           onShouldStartLoadWithRequest={(request) => {
@@ -205,7 +221,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.7"
+          userAgent="BRILHAH-AI-Manager/1.0.8"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
