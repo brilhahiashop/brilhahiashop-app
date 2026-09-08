@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { SOCIAL_UI } from "./social-ai";
 
 const MANAGER_URL = "https://brilhah-ai-manager.vercel.app/";
 const SUPABASE_URL = "https://lnezqvonjcvhgaogndqh.supabase.co";
@@ -16,11 +17,12 @@ const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
 
 const BRILHAH_UI = `
 (function(){
-  if (window.__brilhahMobileUiV3) return true;
-  window.__brilhahMobileUiV3 = true;
+  if (window.__brilhahMobileUiV4) return true;
+  window.__brilhahMobileUiV4 = true;
   var SB_URL='${SUPABASE_URL}';
   var SB_KEY='${SUPABASE_ANON_KEY}';
   var REDIRECT='${MANAGER_URL}';
+${SOCIAL_UI}
 
   function ensureCss(){
     if(document.getElementById('brilhah-mobile-css')) return;
@@ -106,7 +108,7 @@ const BRILHAH_UI = `
     var btn=document.createElement('button'); btn.id='br-settings-nav'; btn.className='nav'; btn.type='button'; btn.innerHTML='<span class="ico">⚙</span>Definições'; btn.onclick=showSettings; side.appendChild(btn);
   }
 
-  function tick(){ensureCss();addRecovery();addSettings();}
+  function tick(){ensureCss();addRecovery();addSettings();addSocial();}
   tick(); setInterval(tick,900);
 })(); true;
 `;
