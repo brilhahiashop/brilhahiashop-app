@@ -1,4 +1,4 @@
-export const SOCIAL_UI = String.raw\`
+export const SOCIAL_UI = String.raw`
   var BR_SOCIAL_STATE={status:null,campaigns:[],posts:[]};
   var BR_SOCIAL_CLIENT=null;
   function socialEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
@@ -100,4 +100,4 @@ export const SOCIAL_UI = String.raw\`
   function addSocial(){
     var old=document.getElementById('br-social-nav');if(!loggedIn()){if(old)old.remove();return;}if(old)return;var side=document.getElementById('side')||document.querySelector('aside');if(!side)return;var btn=document.createElement('button');btn.id='br-social-nav';btn.className='nav';btn.type='button';btn.innerHTML='<span class="ico">📣</span>Social AI';btn.onclick=openSocial;var settings=document.getElementById('br-settings-nav');if(settings)side.insertBefore(btn,settings);else side.appendChild(btn);
   }
-\`;
+`;
