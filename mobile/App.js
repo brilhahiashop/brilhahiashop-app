@@ -135,12 +135,14 @@ ${SOCIAL_UI}
 export default function App() {
   const webRef = useRef(null);
   const sessionRetryTimer = useRef(null);
+  const webAckTimer = useRef(null);
   const [loadError, setLoadError] = useState(false);
   const [authStage, setAuthStage] = useState("loading");
   const [authMessage, setAuthMessage] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [managerSession, setManagerSession] = useState(null);
+  const [webSessionReady, setWebSessionReady] = useState(false);
 
   const openManagerWithSession = async (session) => {
     const email = String(session?.user?.email || "").toLowerCase();
@@ -159,6 +161,7 @@ export default function App() {
     }
 
     setManagerSession(session);
+    setWebSessionReady(false);
     setAuthMessage("");
     setAuthStage("app");
     return true;
@@ -184,7 +187,8 @@ export default function App() {
   useEffect(() => {
     restoreNativeSession();
     return () => {
-      if (sessionRetryTimer.current) clearTimeout(sessionRetryTimer.current);
+      if (sessionRetryTimer.current) clearInterval(sessionRetryTimer.current);
+      if (webAckTimer.current) clearTimeout(webAckTimer.current);
     };
   }, []);
 
@@ -291,33 +295,92 @@ export default function App() {
     }
   };
 
-  const injectManagerSession = () => {
+  const getManagerCallback = () => {
     const at = managerSession?.access_token;
     const rt = managerSession?.refresh_token;
-    if (!at || !rt || !webRef.current) return;
-
-    const callback =
+    if (!at || !rt) return "";
+    return (
       APP_AUTH_REDIRECT +
       "?access_token=" +
       encodeURIComponent(at) +
       "&refresh_token=" +
-      encodeURIComponent(rt);
-    const encoded = JSON.stringify(callback);
+      encodeURIComponent(rt)
+    );
+  };
 
+  const injectManagerSession = () => {
+    const callback = getManagerCallback();
+    if (!callback || !webRef.current) return;
+
+    const encoded = JSON.stringify(callback);
     const deliver =
       `(function(){try{if(window.__brilhahFinishGoogleOAuth){window.__brilhahFinishGoogleOAuth(${encoded});return "ok";}}catch(e){}return "retry";})();true;`;
 
+    if (sessionRetryTimer.current) clearInterval(sessionRetryTimer.current);
     webRef.current.injectJavaScript(deliver);
-    if (sessionRetryTimer.current) clearTimeout(sessionRetryTimer.current);
-    sessionRetryTimer.current = setTimeout(() => {
+
+    let attempts = 0;
+    sessionRetryTimer.current = setInterval(() => {
+      attempts += 1;
+      if (webSessionReady || attempts > 120) {
+        clearInterval(sessionRetryTimer.current);
+        sessionRetryTimer.current = null;
+        return;
+      }
       webRef.current?.injectJavaScript(deliver);
-    }, 700);
-    setTimeout(() => webRef.current?.injectJavaScript(deliver), 1600);
+    }, 500);
+
+    if (webAckTimer.current) clearTimeout(webAckTimer.current);
+    webAckTimer.current = setTimeout(() => {
+      if (!webSessionReady) {
+        webRef.current?.injectJavaScript(deliver);
+      }
+    }, 15000);
   };
+
+  const nativeSessionBootstrap = (() => {
+    const callback = getManagerCallback();
+    if (!callback) return "true;";
+    const encoded = JSON.stringify(callback);
+    return `
+      (function(){
+        try{
+          window.__BRILHAH_NATIVE_CALLBACK=${encoded};
+          var n=0;
+          var t=setInterval(function(){
+            n++;
+            try{
+              if(window.__brilhahFinishGoogleOAuth){
+                clearInterval(t);
+                window.__brilhahFinishGoogleOAuth(window.__BRILHAH_NATIVE_CALLBACK);
+              }else if(n>120){
+                clearInterval(t);
+              }
+            }catch(e){}
+          },250);
+        }catch(e){}
+      })();
+      true;
+    `;
+  })();
 
   const handleWebMessage = async ({ nativeEvent }) => {
     try {
       const msg = JSON.parse(nativeEvent.data || "{}");
+
+      if (msg?.type === "oauth-complete") {
+        if (sessionRetryTimer.current) {
+          clearInterval(sessionRetryTimer.current);
+          sessionRetryTimer.current = null;
+        }
+        if (webAckTimer.current) {
+          clearTimeout(webAckTimer.current);
+          webAckTimer.current = null;
+        }
+        setWebSessionReady(true);
+        return;
+      }
+
       if (msg?.type !== "open-external") return;
       const url = String(msg.url || "");
       const allowed =
@@ -410,7 +473,7 @@ export default function App() {
         <WebView
           ref={webRef}
           source={{ uri: managerUri }}
-          style={styles.webview}
+          style={[styles.webview, !webSessionReady && styles.webHidden]}
           startInLoadingState
           renderLoading={() => (
             <View style={styles.loading}>
@@ -418,10 +481,11 @@ export default function App() {
               <Text style={styles.loadingText}>A ligar ao BRILHAH AI Manager…</Text>
             </View>
           )}
+          injectedJavaScriptBeforeContentLoaded={nativeSessionBootstrap}
           injectedJavaScript={BRILHAH_UI}
           onLoadEnd={() => {
             webRef.current?.injectJavaScript(BRILHAH_UI);
-            setTimeout(injectManagerSession, 250);
+            injectManagerSession();
           }}
           onMessage={handleWebMessage}
           onShouldStartLoadWithRequest={() => true}
@@ -429,7 +493,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.14"
+          userAgent="BRILHAH-AI-Manager/1.0.15"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
@@ -438,6 +502,14 @@ export default function App() {
           pullToRefreshEnabled
           setSupportMultipleWindows={false}
         />
+      )}
+      {!loadError && !webSessionReady && authStage === "app" && (
+        <View style={styles.sessionGate}>
+          <Image source={require("./assets/logo.png")} style={styles.brandLogo} resizeMode="contain" />
+          <ActivityIndicator size="large" />
+          <Text style={styles.loadingText}>A abrir a sessão segura BRILHAH…</Text>
+          <Text style={styles.authHint}>A ligar o MFA ao AI Manager completo.</Text>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -461,6 +533,8 @@ const styles = StyleSheet.create({
   authLoading: { alignItems: "center", paddingVertical: 22, gap: 12 },
   authHint: { color: "#94a3b8", fontSize: 13 },
   webview: { flex: 1, backgroundColor: "#07101d" },
+  webHidden: { opacity: 0 },
+  sessionGate: { ...StyleSheet.absoluteFillObject, zIndex: 20, backgroundColor: "#07101d", alignItems: "center", justifyContent: "center", paddingHorizontal: 28, gap: 14 },
   loading: { ...StyleSheet.absoluteFillObject, backgroundColor: "#07101d", alignItems: "center", justifyContent: "center", gap: 14 },
   brandLogo: { width: 168, height: 168, marginBottom: 6 },
   loadingText: { color: "#f4f7fb", fontSize: 14, fontWeight: "600" },
