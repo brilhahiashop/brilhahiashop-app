@@ -134,6 +134,7 @@ export default function App() {
   const webRef = useRef(null);
   const [stage, setStage] = useState("loading");
   const [message, setMessage] = useState("");
+  const [password, setPassword] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [session, setSession] = useState(null);
   const [loadError, setLoadError] = useState(false);
@@ -225,66 +226,40 @@ export default function App() {
   useEffect(() => {
     restoreSession();
 
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url && String(url).startsWith("brilhah://auth/callback")) finishMagicLink(url);
-      })
-      .catch(() => {});
-
-    const sub = Linking.addEventListener("url", ({ url }) => {
-      if (url && String(url).startsWith("brilhah://auth/callback")) finishMagicLink(url);
-    });
-
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (nextSession) setSession(nextSession);
     });
 
     return () => {
-      sub.remove();
       authListener?.subscription?.unsubscribe?.();
     };
   }, []);
 
-  const sendAccessLink = async () => {
+  const signInWithPassword = async () => {
     try {
       setBusy(true);
-      setMessage("A enviar o email de acesso…");
-      const response = await fetch(
-        SUPABASE_URL + "/auth/v1/recover?redirect_to=" +
-          encodeURIComponent(MANAGER_URL),
-        {
-          method: "POST",
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: ADMIN_EMAIL }),
-        }
-      );
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          payload?.msg ||
-          payload?.message ||
-          payload?.error_description ||
-          "Não foi possível enviar o email."
-        );
+      setMessage("A entrar…");
+      if (String(password || "").length < 8) {
+        throw new Error("Introduz a tua palavra-passe.");
       }
-      setStage("waiting");
-      setMessage(
-        "Email enviado. Abre o email mais recente «Reset Your Password». Não vais alterar a password: o link abre o MFA BRILHAH e depois regressa à APP."
-      );
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password,
+      });
+      if (error) throw error;
+      if (!data?.session) throw new Error("Não foi criada uma sessão válida.");
+
+      setMessage("");
+      await requireAdminSession(data.session);
     } catch (e) {
-      const m = String(e.message || e);
-      setMessage(
-        m.toLowerCase().includes("rate limit")
-          ? "Limite temporário de emails atingido. Aguarda alguns minutos e tenta novamente."
-          : m
-      );
+      setMessage(String(e.message || e));
+      setStage("email");
     } finally {
       setBusy(false);
     }
   };
+
 
   const verifyMfa = async () => {
     try {
@@ -367,6 +342,7 @@ export default function App() {
   const logout = async () => {
     await supabase.auth.signOut().catch(() => {});
     setSession(null);
+    setPassword("");
     setMfaCode("");
     setMessage("");
     setStage("email");
@@ -385,7 +361,7 @@ export default function App() {
             <Text style={styles.nativeSub}>
               {stage === "mfa"
                 ? "Introduz o código atual do teu Authenticator BRILHAH."
-                : "Email BRILHAH + código MFA. Sem palavra-passe."}
+                : "Utilizador BRILHAH + palavra-passe + MFA."}
             </Text>
 
             {stage === "loading" ? (
@@ -418,17 +394,30 @@ export default function App() {
               </>
             ) : (
               <>
-                <Text style={styles.nativeLabel}>Email</Text>
+                <Text style={styles.nativeLabel}>Utilizador</Text>
                 <View style={styles.nativeEmailBox}>
                   <Text style={styles.nativeEmail}>{ADMIN_EMAIL}</Text>
                 </View>
+
+                <Text style={styles.nativeLabel}>Palavra-passe</Text>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="••••••••••••"
+                  placeholderTextColor="#64748b"
+                  style={[styles.nativeInput, { letterSpacing: 0, textAlign: "left", fontSize: 18 }]}
+                />
+
                 <TouchableOpacity
                   style={[styles.nativePrimary, busy && styles.nativeDisabled]}
-                  onPress={sendAccessLink}
+                  onPress={signInWithPassword}
                   disabled={busy}
                 >
                   <Text style={styles.nativePrimaryText}>
-                    {busy ? "A enviar…" : stage === "waiting" ? "Reenviar link" : "Enviar link de acesso"}
+                    {busy ? "A entrar…" : "Continuar"}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -487,7 +476,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.11"
+          userAgent="BRILHAH-AI-Manager/1.0.12"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
