@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -117,6 +118,16 @@ export default function App() {
   const webRef = useRef(null);
   const [loadError, setLoadError] = useState(false);
 
+  const handleWebMessage = async ({ nativeEvent }) => {
+    try {
+      const msg = JSON.parse(nativeEvent.data || "{}");
+      if (msg?.type !== "open-external") return;
+      const url = String(msg.url || "");
+      if (!url.startsWith("https://account.buffer.com/") && !url.startsWith("https://publish.buffer.com/")) return;
+      await Linking.openURL(url);
+    } catch {}
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#07101d" />
@@ -142,6 +153,7 @@ export default function App() {
           )}
           injectedJavaScript={BRILHAH_UI}
           onLoadEnd={() => webRef.current?.injectJavaScript(BRILHAH_UI)}
+          onMessage={handleWebMessage}
           onError={() => setLoadError(true)}
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);

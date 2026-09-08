@@ -20,6 +20,26 @@ export const SOCIAL_UI = String.raw`
     var r=await fetch(SB_URL+'/functions/v1/brilhah-social-ai?resource='+encodeURIComponent(resource),Object.assign({},o,{headers:headers}));
     var j=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(j.error||'Erro no Social AI');return j;
   }
+  function openSocialLogin(network){
+    try{
+      localStorage.setItem('br-social-pending-network',String(network||''));
+      if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage){
+        window.ReactNativeWebView.postMessage(JSON.stringify({type:'open-external',url:'https://account.buffer.com/channels',network:String(network||'')}));
+      }else{
+        window.open('https://account.buffer.com/channels','_blank','noopener,noreferrer');
+      }
+    }catch(e){window.open('https://account.buffer.com/channels','_blank','noopener,noreferrer');}
+  }
+  async function syncAfterSocialLogin(){
+    if(!document.getElementById('br-social-screen'))return;
+    try{
+      var st=BR_SOCIAL_STATE.status||{};
+      if(!st.connected)return;
+      await socialApi('sync-channels',{method:'POST',body:'{}'});
+      localStorage.removeItem('br-social-pending-network');
+      await loadSocial();
+    }catch(e){}
+  }
   function socialDefaultDate(){var d=new Date(Date.now()+8*3600000);d.setMinutes(0,0,0);var z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,16);}
   function openSocial(){
     ensureSocialCss();var old=document.getElementById('br-social-screen');if(old)old.remove();
@@ -39,7 +59,9 @@ export const SOCIAL_UI = String.raw`
     var channelText=chs.length?chs.map(function(c){return String(c.service||'').toUpperCase();}).join(' · '):'Nenhum canal';
     body.innerHTML='<div class="br-social-kpis"><div class="br-social-kpi"><small>Produtos elegíveis</small><b>'+socialEsc((st.counts&&st.counts.active_products)||0)+'</b></div><div class="br-social-kpi"><small>Campanhas</small><b>'+socialEsc((st.counts&&st.counts.campaigns)||cs.length)+'</b></div><div class="br-social-kpi"><small>Agendados</small><b>'+scheduled+'</b></div><div class="br-social-kpi"><small>Publicados</small><b>'+published+'</b></div></div>'+
     '<div class="br-social-grid"><div class="br-social-card"><h3>1. Publicação</h3><div class="br-social-row"><div class="br-social-meta"><b>Buffer</b><small>'+socialEsc(channelText)+'</small></div><span class="br-social-badge '+(st.connected?'on':'')+'"><i></i>'+(st.connected?'Ligado':'Por ligar')+'</span></div>'+
-    (st.connected?'<button id="br-sync-channels" class="br-social-btn" style="margin-top:10px">Atualizar canais</button>':'<div class="br-social-field"><label>API key pessoal do Buffer</label><input id="br-buffer-key" class="br-social-input" type="password" autocomplete="off" placeholder="Colar aqui — não é guardada na app"></div><button id="br-connect-buffer" class="br-social-btn gold" style="margin-top:9px">Ligar Buffer</button>')+'<div id="br-buffer-msg" class="br-social-note"></div></div>'+
+    (st.connected?'<button id="br-sync-channels" class="br-social-btn" style="margin-top:10px">Atualizar canais</button>':'<div class="br-social-field"><label>API key pessoal do Buffer</label><input id="br-buffer-key" class="br-social-input" type="password" autocomplete="off" placeholder="Colar aqui — não é guardada na app"></div><button id="br-connect-buffer" class="br-social-btn gold" style="margin-top:9px">Ligar Buffer</button>')+
+    '<div class="br-social-field"><label>Ligar perfis sociais</label><div class="br-social-checks"><button class="br-social-btn" data-br-login="instagram">Instagram</button><button class="br-social-btn" data-br-login="facebook">Facebook</button><button class="br-social-btn" data-br-login="tiktok">TikTok</button></div></div>'+
+    '<div class="br-social-note">Ao tocar numa rede, abre a ligação segura do Buffer no browser. Faz login na conta certa, autoriza e volta à app; depois o perfil fica disponível para publicação direta.</div><div id="br-buffer-msg" class="br-social-note"></div></div>'+
     '<div class="br-social-card"><h3>2. Nova campanha</h3><div class="br-social-field"><label>Formato</label><div class="br-social-choice"><label><input type="radio" name="br-media" value="photo" checked>📸 Fotos</label><label><input type="radio" name="br-media" value="video">🎬 Vídeo MP4</label></div></div>'+
     '<div class="br-social-field"><label>Objetivo</label><select id="br-objective" class="br-social-select"><option value="sales">Vendas</option><option value="engagement">Interação</option><option value="awareness">Alcance</option></select></div>'+
     '<div class="br-social-field"><label>Redes</label><div class="br-social-checks"><label class="br-check"><input class="br-platform" type="checkbox" value="instagram" checked>Instagram</label><label class="br-check"><input class="br-platform" type="checkbox" value="facebook" checked>Facebook</label><label class="br-check"><input class="br-platform" type="checkbox" value="tiktok" checked>TikTok</label></div></div>'+
@@ -60,6 +82,7 @@ export const SOCIAL_UI = String.raw`
     var b=document.getElementById('br-connect-buffer');if(b)b.onclick=connectBufferUi;
     b=document.getElementById('br-sync-channels');if(b)b.onclick=async function(){var m=document.getElementById('br-buffer-msg');try{m.textContent='A sincronizar…';await socialApi('sync-channels',{method:'POST',body:'{}'});await loadSocial();}catch(e){m.className='br-social-note br-social-err';m.textContent=e.message;}};
     b=document.getElementById('br-create-campaign');if(b)b.onclick=createCampaignUi;b=document.getElementById('br-social-refresh');if(b)b.onclick=loadSocial;b=document.getElementById('br-sync-metrics');if(b)b.onclick=syncMetricsUi;
+    document.querySelectorAll('[data-br-login]').forEach(function(x){x.onclick=function(){openSocialLogin(x.getAttribute('data-br-login'));};});
     document.querySelectorAll('[data-br-schedule]').forEach(function(x){x.onclick=function(){scheduleCampaignUi(x.getAttribute('data-br-schedule'),x);};});document.querySelectorAll('[data-br-video]').forEach(function(x){x.onclick=function(){generateCampaignVideosUi(x.getAttribute('data-br-video'),x);};});
   }
   async function connectBufferUi(){
@@ -97,6 +120,7 @@ export const SOCIAL_UI = String.raw`
       alert(done+' vídeo(s) preparado(s) sem watermark ✓');await loadSocial();
     }catch(e){alert('Vídeo: '+e.message);b.disabled=false;b.textContent=original;}
   }
+  if(!window.__brSocialFocusHook){window.__brSocialFocusHook=true;window.addEventListener('focus',function(){setTimeout(syncAfterSocialLogin,700);});document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(syncAfterSocialLogin,700);});}
   function addSocial(){
     var old=document.getElementById('br-social-nav');if(!loggedIn()){if(old)old.remove();return;}if(old)return;var side=document.getElementById('side')||document.querySelector('aside');if(!side)return;var btn=document.createElement('button');btn.id='br-social-nav';btn.className='nav';btn.type='button';btn.innerHTML='<span class="ico">📣</span>Social AI';btn.onclick=openSocial;var settings=document.getElementById('br-settings-nav');if(settings)side.insertBefore(btn,settings);else side.appendChild(btn);
   }
