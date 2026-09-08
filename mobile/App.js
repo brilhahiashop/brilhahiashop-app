@@ -120,6 +120,7 @@ export default function App() {
   const authRetryTimer = useRef(null);
   const webReady = useRef(false);
   const [loadError, setLoadError] = useState(false);
+  const [managerUri, setManagerUri] = useState(MANAGER_URL);
 
   const tryDeliverAuthCallback = () => {
     const value = pendingAuthUrl.current;
@@ -135,6 +136,18 @@ export default function App() {
   const deliverAuthCallback = (url) => {
     const value = String(url || "");
     if (!value.startsWith("brilhah://auth/callback")) return;
+
+    try {
+      const parsed = new URL(value);
+      const code = parsed.searchParams.get("code");
+      if (code) {
+        pendingAuthUrl.current = null;
+        webReady.current = false;
+        setManagerUri(MANAGER_URL + "#native_oauth_code=" + encodeURIComponent(code));
+        return;
+      }
+    } catch {}
+
     pendingAuthUrl.current = value;
     tryDeliverAuthCallback();
   };
@@ -155,6 +168,7 @@ export default function App() {
       const msg = JSON.parse(nativeEvent.data || "{}");
       if (msg?.type === "oauth-complete") {
         pendingAuthUrl.current = null;
+        setManagerUri(MANAGER_URL);
         if (authRetryTimer.current) {
           clearTimeout(authRetryTimer.current);
           authRetryTimer.current = null;
@@ -187,7 +201,7 @@ export default function App() {
       ) : (
         <WebView
           ref={webRef}
-          source={{ uri: MANAGER_URL }}
+          source={{ uri: managerUri }}
           style={styles.webview}
           startInLoadingState
           renderLoading={() => (
@@ -221,7 +235,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.8"
+          userAgent="BRILHAH-AI-Manager/1.0.9"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
