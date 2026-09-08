@@ -23,6 +23,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
 const ADMIN_EMAIL = "brilhahiashop+admin@gmail.com";
 const APP_AUTH_REDIRECT = "brilhah://auth/callback";
 const BOOTSTRAP_URL = SUPABASE_URL + "/functions/v1/brilhah-bootstrap-login";
+const WEB_AUTH_STORAGE_KEY = "sb-lnezqvonjcvhgaogndqh-auth-token";
 
 const nativeSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -143,6 +144,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [managerSession, setManagerSession] = useState(null);
   const [webSessionReady, setWebSessionReady] = useState(false);
+  const [webAuthError, setWebAuthError] = useState("");
 
   const openManagerWithSession = async (session) => {
     const email = String(session?.user?.email || "").toLowerCase();
@@ -264,19 +266,32 @@ export default function App() {
       });
       if (verified.error) throw verified.error;
 
-      const aal = await nativeSupabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal.error) throw aal.error;
-      if (aal.data?.currentLevel !== "aal2") {
-        throw new Error("O MFA não ficou confirmado. Usa o código atual e tenta novamente.");
+      let aal2Session = null;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const current = await nativeSupabase.auth.getSession();
+        if (current.error) throw current.error;
+
+        const candidate = current.data?.session;
+        if (candidate?.access_token) {
+          const aal = await nativeSupabase.auth.mfa.getAuthenticatorAssuranceLevel(
+            candidate.access_token
+          );
+          if (!aal.error && aal.data?.currentLevel === "aal2") {
+            aal2Session = candidate;
+            break;
+          }
+        }
+
+        const refreshed = await nativeSupabase.auth.refreshSession();
+        if (refreshed.error) throw refreshed.error;
       }
 
-      const current = await nativeSupabase.auth.getSession();
-      if (current.error || !current.data?.session) {
-        throw current.error || new Error("Sessão inválida depois do MFA.");
+      if (!aal2Session) {
+        throw new Error("O MFA foi aceite, mas a sessão segura não ficou em AAL2.");
       }
 
       setMfaCode("");
-      await openManagerWithSession(current.data.session);
+      await openManagerWithSession(aal2Session);
     } catch (e) {
       const raw = String(e?.message || e);
       const lower = raw.toLowerCase();
@@ -308,67 +323,80 @@ export default function App() {
     );
   };
 
-  const injectManagerSession = () => {
-    const callback = getManagerCallback();
-    if (!callback || !webRef.current) return;
+  const getManagerSeedScript = () => {
+    if (!managerSession?.access_token || !managerSession?.refresh_token) return "true;";
+    const sessionJson = JSON.stringify(managerSession);
+    const callback = JSON.stringify(getManagerCallback());
 
-    const encoded = JSON.stringify(callback);
-    const deliver =
-      `(function(){try{if(window.__brilhahFinishGoogleOAuth){window.__brilhahFinishGoogleOAuth(${encoded});return "ok";}}catch(e){}return "retry";})();true;`;
-
-    if (sessionRetryTimer.current) clearInterval(sessionRetryTimer.current);
-    webRef.current.injectJavaScript(deliver);
-
-    let attempts = 0;
-    sessionRetryTimer.current = setInterval(() => {
-      attempts += 1;
-      if (webSessionReady || attempts > 120) {
-        clearInterval(sessionRetryTimer.current);
-        sessionRetryTimer.current = null;
-        return;
-      }
-      webRef.current?.injectJavaScript(deliver);
-    }, 500);
-
-    if (webAckTimer.current) clearTimeout(webAckTimer.current);
-    webAckTimer.current = setTimeout(() => {
-      if (!webSessionReady) {
-        webRef.current?.injectJavaScript(deliver);
-      }
-    }, 15000);
-  };
-
-  const nativeSessionBootstrap = (() => {
-    const callback = getManagerCallback();
-    if (!callback) return "true;";
-    const encoded = JSON.stringify(callback);
     return `
       (function(){
         try{
-          window.__BRILHAH_NATIVE_CALLBACK=${encoded};
-          var n=0;
-          var t=setInterval(function(){
-            n++;
+          var session=${JSON.stringify(sessionJson)};
+          localStorage.setItem(${JSON.stringify(WEB_AUTH_STORAGE_KEY)}, session);
+          window.__BRILHAH_NATIVE_CALLBACK=${callback};
+
+          if(!sessionStorage.getItem("brilhah_native_seed_reload")){
+            sessionStorage.setItem("brilhah_native_seed_reload","1");
+          }
+
+          var tries=0;
+          var timer=setInterval(function(){
+            tries++;
             try{
-              if(window.__brilhahFinishGoogleOAuth){
-                clearInterval(t);
+              var app=document.getElementById("app");
+              var ready=!!(app && !app.classList.contains("hidden"));
+              if(ready){
+                clearInterval(timer);
+                if(window.ReactNativeWebView){
+                  window.ReactNativeWebView.postMessage(JSON.stringify({type:"manager-ready"}));
+                }
+                return;
+              }
+
+              if(window.__brilhahFinishGoogleOAuth && tries===4){
                 window.__brilhahFinishGoogleOAuth(window.__BRILHAH_NATIVE_CALLBACK);
-              }else if(n>120){
-                clearInterval(t);
+              }
+
+              if(tries>80){
+                clearInterval(timer);
+                if(window.ReactNativeWebView){
+                  var login=document.getElementById("loginBox");
+                  var visible=!!(login && !login.classList.contains("hidden"));
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type:"manager-auth-failed",
+                    loginVisible:visible
+                  }));
+                }
               }
             }catch(e){}
           },250);
-        }catch(e){}
+        }catch(e){
+          try{
+            if(window.ReactNativeWebView){
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type:"manager-auth-failed",
+                reason:String(e && e.message || e)
+              }));
+            }
+          }catch(_){}
+        }
       })();
       true;
     `;
-  })();
+  };
+
+  const injectManagerSession = () => {
+    if (!webRef.current) return;
+    webRef.current.injectJavaScript(getManagerSeedScript());
+  };
+
+  const nativeSessionBootstrap = getManagerSeedScript();
 
   const handleWebMessage = async ({ nativeEvent }) => {
     try {
       const msg = JSON.parse(nativeEvent.data || "{}");
 
-      if (msg?.type === "oauth-complete") {
+      if (msg?.type === "manager-ready") {
         if (sessionRetryTimer.current) {
           clearInterval(sessionRetryTimer.current);
           sessionRetryTimer.current = null;
@@ -377,7 +405,20 @@ export default function App() {
           clearTimeout(webAckTimer.current);
           webAckTimer.current = null;
         }
+        setWebAuthError("");
         setWebSessionReady(true);
+        return;
+      }
+
+      if (msg?.type === "manager-auth-failed") {
+        setWebSessionReady(false);
+        setWebAuthError(
+          "A sessão MFA foi validada, mas o AI Manager não aceitou a sessão Web."
+        );
+        return;
+      }
+
+      if (msg?.type === "oauth-complete") {
         return;
       }
 
@@ -391,14 +432,7 @@ export default function App() {
     } catch {}
   };
 
-  const managerUri =
-    managerSession?.access_token && managerSession?.refresh_token
-      ? MANAGER_URL +
-        "#access_token=" +
-        encodeURIComponent(managerSession.access_token) +
-        "&refresh_token=" +
-        encodeURIComponent(managerSession.refresh_token)
-      : MANAGER_URL;
+  const managerUri = MANAGER_URL;
 
   if (authStage !== "app") {
     return (
@@ -493,7 +527,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.15"
+          userAgent="BRILHAH-AI-Manager/1.0.16"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
@@ -506,9 +540,13 @@ export default function App() {
       {!loadError && !webSessionReady && authStage === "app" && (
         <View style={styles.sessionGate}>
           <Image source={require("./assets/logo.png")} style={styles.brandLogo} resizeMode="contain" />
-          <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>A abrir a sessão segura BRILHAH…</Text>
-          <Text style={styles.authHint}>A ligar o MFA ao AI Manager completo.</Text>
+          {!webAuthError && <ActivityIndicator size="large" />}
+          <Text style={styles.loadingText}>
+            {webAuthError ? "Não foi possível abrir o AI Manager" : "A abrir a sessão segura BRILHAH…"}
+          </Text>
+          <Text style={styles.authHint}>
+            {webAuthError || "A validar a sessão AAL2 dentro do painel completo."}
+          </Text>
         </View>
       )}
     </SafeAreaView>
