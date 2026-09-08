@@ -12,7 +12,7 @@ import {
 import { WebView } from "react-native-webview";
 import { SOCIAL_UI } from "./social-ai";
 
-const MANAGER_URL = "https://lnezqvonjcvhgaogndqh.supabase.co/functions/v1/brilhah-manager-shell";
+const MANAGER_URL = "https://brilhah-ai-manager.vercel.app/";
 const SUPABASE_URL = "https://lnezqvonjcvhgaogndqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
 
@@ -109,7 +109,106 @@ ${SOCIAL_UI}
     var btn=document.createElement('button'); btn.id='br-settings-nav'; btn.className='nav'; btn.type='button'; btn.innerHTML='<span class="ico">⚙</span>Definições'; btn.onclick=showSettings; side.appendChild(btn);
   }
 
-  function tick(){ensureCss();addSettings();addSocial();}
+
+  function installDirectMfaLogin(){
+    if(loggedIn()) return;
+    var box=document.getElementById('loginBox');
+    if(!box) return;
+
+    var oldLink=document.getElementById('passwordlessAdminLink');
+    if(oldLink) oldLink.style.display='none';
+
+    var oldPass=document.getElementById('password');
+    if(oldPass) oldPass.style.display='none';
+
+    var oldBtn=document.getElementById('loginBtn');
+    if(oldBtn) oldBtn.style.display='none';
+
+    var intro=box.querySelector('p.mut');
+    if(intro) intro.textContent='Email BRILHAH + código do Authenticator. Sem palavra-passe e sem links de email.';
+
+    var email=document.getElementById('email');
+    if(email){
+      email.value='brilhahiashop+admin@gmail.com';
+      email.readOnly=true;
+    }
+
+    if(document.getElementById('br-direct-mfa-wrap')) return;
+
+    var wrap=document.createElement('div');
+    wrap.id='br-direct-mfa-wrap';
+    wrap.innerHTML=
+      '<div class="field" style="margin-top:14px">'+
+        '<label>Código MFA</label>'+
+        '<input id="br-direct-mfa-code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="000000">'+
+      '</div>'+
+      '<button id="br-direct-mfa-btn" class="btn primary full" style="margin-top:14px" type="button">Entrar</button>'+
+      '<div id="br-direct-mfa-msg" class="msg"></div>';
+    box.appendChild(wrap);
+
+    if(!document.getElementById('br-direct-auth-module')){
+      var mod=document.createElement('script');
+      mod.type='module';
+      mod.id='br-direct-auth-module';
+      mod.textContent=
+        'import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";'+
+        'const U='+JSON.stringify(SB_URL)+';'+
+        'const K='+JSON.stringify(SB_KEY)+';'+
+        'const E="brilhahiashop+admin@gmail.com";'+
+        'const C=createClient(U,K,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:"pkce"}});'+
+        'window.__brDirectMfaLogin=async function(code){'+
+          'code=String(code||"").replace(/\\D/g,"").slice(0,6);'+
+          'if(code.length!==6)throw new Error("Introduz os 6 dígitos do Authenticator BRILHAH.");'+
+          'await C.auth.signOut().catch(()=>{});'+
+          'const r=await fetch(U+"/functions/v1/brilhah-bootstrap-login",{method:"POST",headers:{apikey:K,"Content-Type":"application/json"},body:JSON.stringify({email:E})});'+
+          'const p=await r.json().catch(()=>({}));'+
+          'if(!r.ok||!p.token_hash)throw new Error("Não foi possível iniciar a sessão BRILHAH.");'+
+          'const first=await C.auth.verifyOtp({token_hash:p.token_hash,type:"email"});'+
+          'if(first.error)throw first.error;'+
+          'const fs=await C.auth.mfa.listFactors();'+
+          'if(fs.error)throw fs.error;'+
+          'const factor=(fs.data?.totp||[]).find(x=>x.status==="verified");'+
+          'if(!factor)throw new Error("Authenticator BRILHAH não encontrado.");'+
+          'const ch=await C.auth.mfa.challenge({factorId:factor.id});'+
+          'if(ch.error)throw ch.error;'+
+          'const vr=await C.auth.mfa.verify({factorId:factor.id,challengeId:ch.data.id,code});'+
+          'if(vr.error)throw vr.error;'+
+          'const aal=await C.auth.mfa.getAuthenticatorAssuranceLevel();'+
+          'if(aal.error)throw aal.error;'+
+          'if(aal.data?.currentLevel!=="aal2")throw new Error("O MFA não ficou confirmado em AAL2.");'+
+          'const s=await C.auth.getSession();'+
+          'if(s.error||!s.data?.session)throw (s.error||new Error("Sessão BRILHAH inválida."));'+
+          'location.replace('+JSON.stringify(MANAGER_URL)+');'+
+        '};';
+      document.head.appendChild(mod);
+    }
+
+    document.getElementById('br-direct-mfa-btn').onclick=async function(){
+      var btn=document.getElementById('br-direct-mfa-btn');
+      var msg=document.getElementById('br-direct-mfa-msg');
+      try{
+        btn.disabled=true;
+        btn.textContent='A validar…';
+        msg.className='msg';
+        msg.textContent='A validar o Authenticator…';
+        var tries=0;
+        while(typeof window.__brDirectMfaLogin!=='function' && tries<40){
+          await new Promise(function(r){setTimeout(r,100);});
+          tries++;
+        }
+        if(typeof window.__brDirectMfaLogin!=='function') throw new Error('O módulo seguro de autenticação não carregou.');
+        await window.__brDirectMfaLogin(document.getElementById('br-direct-mfa-code').value);
+      }catch(e){
+        var m=String((e&&e.message)||e);
+        msg.className='msg err';
+        msg.textContent=/invalid|totp|challenge|expired/i.test(m)?'Código MFA inválido ou expirado. Usa o código atual do Authenticator.':m;
+        btn.disabled=false;
+        btn.textContent='Entrar';
+      }
+    };
+  }
+
+  function tick(){ensureCss();installDirectMfaLogin();addSettings();addSocial();}
   tick(); setInterval(tick,900);
 })(); true;
 `;
