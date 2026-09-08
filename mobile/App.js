@@ -248,22 +248,37 @@ export default function App() {
   const sendAccessLink = async () => {
     try {
       setBusy(true);
-      setMessage("A enviar o link de acesso…");
-      const { error } = await supabase.auth.signInWithOtp({
-        email: ADMIN_EMAIL,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: "brilhah://auth/callback",
-        },
-      });
-      if (error) throw error;
+      setMessage("A enviar o email de acesso…");
+      const response = await fetch(
+        SUPABASE_URL + "/auth/v1/recover?redirect_to=" +
+          encodeURIComponent(MANAGER_URL),
+        {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: ADMIN_EMAIL }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload?.msg ||
+          payload?.message ||
+          payload?.error_description ||
+          "Não foi possível enviar o email."
+        );
+      }
       setStage("waiting");
-      setMessage("Link enviado. Abre o email mais recente da BRILHAH e toca no link.");
+      setMessage(
+        "Email enviado. Abre o email mais recente «Reset Your Password». Não vais alterar a password: o link abre o MFA BRILHAH e depois regressa à APP."
+      );
     } catch (e) {
       const m = String(e.message || e);
       setMessage(
         m.toLowerCase().includes("rate limit")
-          ? "Foram pedidos vários emails. Aguarda alguns minutos e tenta novamente."
+          ? "Limite temporário de emails atingido. Aguarda alguns minutos e tenta novamente."
           : m
       );
     } finally {
@@ -472,7 +487,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.10"
+          userAgent="BRILHAH-AI-Manager/1.0.11"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
