@@ -22,6 +22,7 @@ const SUPABASE_URL = "https://lnezqvonjcvhgaogndqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
 const ADMIN_EMAIL = "brilhahiashop+admin@gmail.com";
 const APP_AUTH_REDIRECT = "brilhah://auth/callback";
+const BOOTSTRAP_URL = SUPABASE_URL + "/functions/v1/brilhah-bootstrap-login";
 
 const nativeSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -141,7 +142,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [managerSession, setManagerSession] = useState(null);
 
-  const checkAdminAndMfa = async (session) => {
+  const openManagerWithSession = async (session) => {
     const email = String(session?.user?.email || "").toLowerCase();
     if (!session || email !== ADMIN_EMAIL) {
       await nativeSupabase.auth.signOut().catch(() => {});
@@ -151,148 +152,103 @@ export default function App() {
     const aal = await nativeSupabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (aal.error) throw aal.error;
 
-    setManagerSession(session);
-    if (aal.data?.currentLevel === "aal2") {
-      setAuthMessage("");
-      setAuthStage("app");
-      return;
+    if (aal.data?.currentLevel !== "aal2") {
+      setManagerSession(session);
+      setAuthStage("login");
+      return false;
     }
 
-    const factors = await nativeSupabase.auth.mfa.listFactors();
-    if (factors.error) throw factors.error;
-    const verified = (factors.data?.totp || []).find((x) => x.status === "verified");
-    if (!verified) throw new Error("Não encontrei o MFA antigo BRILHAH.");
-
+    setManagerSession(session);
     setAuthMessage("");
-    setAuthStage("mfa");
+    setAuthStage("app");
+    return true;
   };
 
   const restoreNativeSession = async () => {
     try {
       const { data, error } = await nativeSupabase.auth.getSession();
       if (error) throw error;
+
       if (!data?.session) {
-        setAuthStage("email");
+        setAuthStage("login");
         return;
       }
-      await checkAdminAndMfa(data.session);
+
+      await openManagerWithSession(data.session);
     } catch (e) {
       setAuthMessage(String(e?.message || e));
-      setAuthStage("email");
-    }
-  };
-
-  const processAuthCallback = async (url) => {
-    const value = String(url || "");
-    if (!value.startsWith(APP_AUTH_REDIRECT)) return;
-    try {
-      setBusy(true);
-      setAuthMessage("A confirmar o acesso…");
-
-      const u = new URL(value);
-      const hp = new URLSearchParams((u.hash || "").replace(/^#/, ""));
-      const qp = u.searchParams;
-      const err =
-        qp.get("error_description") ||
-        qp.get("error") ||
-        hp.get("error_description") ||
-        hp.get("error");
-      if (err) throw new Error(decodeURIComponent(err));
-
-      const accessToken = qp.get("access_token") || hp.get("access_token");
-      const refreshToken = qp.get("refresh_token") || hp.get("refresh_token");
-
-      if (!accessToken || !refreshToken) {
-        throw new Error("O email abriu a APP sem uma sessão válida. Pede um novo link.");
-      }
-
-      const { data, error } = await nativeSupabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (error) throw error;
-      if (!data?.session) throw new Error("Não foi possível criar a sessão BRILHAH.");
-
-      await checkAdminAndMfa(data.session);
-    } catch (e) {
-      setAuthMessage(String(e?.message || e));
-      setAuthStage("email");
-    } finally {
-      setBusy(false);
+      setAuthStage("login");
     }
   };
 
   useEffect(() => {
     restoreNativeSession();
-
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url) processAuthCallback(url);
-      })
-      .catch(() => {});
-
-    const sub = Linking.addEventListener("url", ({ url }) => processAuthCallback(url));
     return () => {
-      sub.remove();
       if (sessionRetryTimer.current) clearTimeout(sessionRetryTimer.current);
     };
   }, []);
 
-  const sendAccessEmail = async () => {
-    try {
-      setBusy(true);
-      setAuthMessage("A enviar email de acesso…");
-
-      const response = await fetch(
-        SUPABASE_URL +
-          "/auth/v1/recover?redirect_to=" +
-          encodeURIComponent(APP_AUTH_REDIRECT),
-        {
-          method: "POST",
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: ADMIN_EMAIL }),
-        }
-      );
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          payload?.msg ||
-            payload?.message ||
-            payload?.error_description ||
-            "Não foi possível enviar o email."
-        );
-      }
-
-      setAuthMessage(
-        "Email enviado. Abre apenas o «Reset Your Password» mais recente e toca em Reset Password. O link abre diretamente esta APP; não vais definir nenhuma password."
-      );
-    } catch (e) {
-      const msg = String(e?.message || e);
-      setAuthMessage(
-        msg.toLowerCase().includes("rate limit")
-          ? "Limite temporário de emails atingido. Aguarda alguns minutos e tenta novamente."
-          : msg
-      );
-    } finally {
-      setBusy(false);
+  const ensureAal1Session = async () => {
+    const current = await nativeSupabase.auth.getSession();
+    if (
+      current.data?.session &&
+      String(current.data.session.user?.email || "").toLowerCase() === ADMIN_EMAIL
+    ) {
+      return current.data.session;
     }
+
+    await nativeSupabase.auth.signOut().catch(() => {});
+
+    const response = await fetch(BOOTSTRAP_URL, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: ADMIN_EMAIL }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.token_hash) {
+      throw new Error("Não foi possível iniciar o acesso BRILHAH. Tenta novamente.");
+    }
+
+    const { data, error } = await nativeSupabase.auth.verifyOtp({
+      token_hash: payload.token_hash,
+      type: "email",
+    });
+
+    if (error) throw error;
+    if (!data?.session) throw new Error("Não foi possível criar a sessão BRILHAH.");
+
+    const email = String(data.session.user?.email || "").toLowerCase();
+    if (email !== ADMIN_EMAIL) {
+      await nativeSupabase.auth.signOut().catch(() => {});
+      throw new Error("Esta não é a conta administrativa BRILHAH.");
+    }
+
+    return data.session;
   };
 
-  const verifyMfa = async () => {
+  const signInWithMfa = async () => {
     try {
       setBusy(true);
-      setAuthMessage("A confirmar MFA…");
+      setAuthMessage("A validar o Authenticator…");
+
       const code = String(mfaCode || "").replace(/\D/g, "").slice(0, 6);
-      if (code.length !== 6) throw new Error("Introduz os 6 dígitos do Authenticator BRILHAH.");
+      if (code.length !== 6) {
+        throw new Error("Introduz os 6 dígitos do Authenticator BRILHAH.");
+      }
+
+      await ensureAal1Session();
 
       const factors = await nativeSupabase.auth.mfa.listFactors();
       if (factors.error) throw factors.error;
+
       const factor = (factors.data?.totp || []).find((x) => x.status === "verified");
-      if (!factor) throw new Error("Não encontrei o MFA antigo BRILHAH.");
+      if (!factor) {
+        throw new Error("Não encontrei o Authenticator BRILHAH associado a esta conta.");
+      }
 
       const challenge = await nativeSupabase.auth.mfa.challenge({ factorId: factor.id });
       if (challenge.error) throw challenge.error;
@@ -315,12 +271,21 @@ export default function App() {
         throw current.error || new Error("Sessão inválida depois do MFA.");
       }
 
-      setManagerSession(current.data.session);
       setMfaCode("");
-      setAuthMessage("");
-      setAuthStage("app");
+      await openManagerWithSession(current.data.session);
     } catch (e) {
-      setAuthMessage(String(e?.message || e));
+      const raw = String(e?.message || e);
+      const lower = raw.toLowerCase();
+      if (
+        lower.includes("invalid") ||
+        lower.includes("totp") ||
+        lower.includes("challenge") ||
+        lower.includes("expired")
+      ) {
+        setAuthMessage("Código inválido ou expirado. Introduz o código atual do teu Authenticator.");
+      } else {
+        setAuthMessage(raw);
+      }
     } finally {
       setBusy(false);
     }
@@ -370,13 +335,9 @@ export default function App() {
         <View style={styles.authWrap}>
           <View style={styles.authCard}>
             <Text style={styles.authBrand}>BRILHAH AI MANAGER</Text>
-            <Text style={styles.authTitle}>
-              {authStage === "mfa" ? "Confirmar MFA" : "Acesso privado"}
-            </Text>
+            <Text style={styles.authTitle}>Acesso privado</Text>
             <Text style={styles.authSub}>
-              {authStage === "mfa"
-                ? "Introduz o código atual do teu Authenticator BRILHAH."
-                : "Email BRILHAH + código MFA. Sem palavra-passe."}
+              Email BRILHAH + código do Authenticator. Sem links de email e sem palavra-passe.
             </Text>
 
             {authStage === "loading" ? (
@@ -384,9 +345,14 @@ export default function App() {
                 <ActivityIndicator size="large" />
                 <Text style={styles.authHint}>A verificar sessão…</Text>
               </View>
-            ) : authStage === "mfa" ? (
+            ) : (
               <>
-                <Text style={styles.authLabel}>Código MFA</Text>
+                <Text style={styles.authLabel}>Email</Text>
+                <View style={styles.authEmailBox}>
+                  <Text style={styles.authEmail}>{ADMIN_EMAIL}</Text>
+                </View>
+
+                <Text style={[styles.authLabel, { marginTop: 16 }]}>Código MFA</Text>
                 <TextInput
                   value={mfaCode}
                   onChangeText={setMfaCode}
@@ -397,29 +363,14 @@ export default function App() {
                   placeholderTextColor="#64748b"
                   style={styles.authInput}
                 />
+
                 <TouchableOpacity
                   style={[styles.authPrimary, busy && styles.authDisabled]}
-                  onPress={verifyMfa}
+                  onPress={signInWithMfa}
                   disabled={busy}
                 >
                   <Text style={styles.authPrimaryText}>
-                    {busy ? "A confirmar…" : "Entrar"}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.authLabel}>Email</Text>
-                <View style={styles.authEmailBox}>
-                  <Text style={styles.authEmail}>{ADMIN_EMAIL}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.authPrimary, busy && styles.authDisabled]}
-                  onPress={sendAccessEmail}
-                  disabled={busy}
-                >
-                  <Text style={styles.authPrimaryText}>
-                    {busy ? "A enviar…" : "Enviar email de acesso"}
+                    {busy ? "A validar…" : "Entrar"}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -469,7 +420,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.12"
+          userAgent="BRILHAH-AI-Manager/1.0.13"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
