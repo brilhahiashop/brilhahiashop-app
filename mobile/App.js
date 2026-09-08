@@ -328,6 +328,15 @@ export default function App() {
     } catch {}
   };
 
+  const managerUri =
+    managerSession?.access_token && managerSession?.refresh_token
+      ? MANAGER_URL +
+        "#access_token=" +
+        encodeURIComponent(managerSession.access_token) +
+        "&refresh_token=" +
+        encodeURIComponent(managerSession.refresh_token)
+      : MANAGER_URL;
+
   if (authStage !== "app") {
     return (
       <SafeAreaView style={styles.container}>
@@ -400,7 +409,7 @@ export default function App() {
       ) : (
         <WebView
           ref={webRef}
-          source={{ uri: MANAGER_URL }}
+          source={{ uri: managerUri }}
           style={styles.webview}
           startInLoadingState
           renderLoading={() => (
@@ -420,7 +429,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.13"
+          userAgent="BRILHAH-AI-Manager/1.0.14"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
