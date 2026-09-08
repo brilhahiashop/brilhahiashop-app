@@ -190,10 +190,22 @@ export default function App() {
             }
           }}
           onMessage={handleWebMessage}
+          onShouldStartLoadWithRequest={(request) => {
+            const url = String(request?.url || "");
+            const isSupabaseOAuth =
+              url.startsWith(SUPABASE_URL + "/auth/v1/authorize") ||
+              url.startsWith("https://accounts.google.com/");
+            if (isSupabaseOAuth) {
+              Linking.openURL(url).catch(() => {});
+              return false;
+            }
+            return true;
+          }}
           onError={() => setLoadError(true)}
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
+          userAgent="BRILHAH-AI-Manager/1.0.7"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
