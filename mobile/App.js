@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import {
-  ActivityIndicator,
+  Image,
   Linking,
   SafeAreaView,
   StatusBar,
@@ -133,6 +133,7 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor="#07101d" />
       {loadError ? (
         <View style={styles.error}>
+          <Image source={require("./assets/logo.png")} style={styles.brandLogo} resizeMode="contain" />
           <Text style={styles.errorTitle}>BRILHAH AI Manager</Text>
           <Text style={styles.errorText}>Não foi possível ligar ao painel de produção.</Text>
           <TouchableOpacity style={styles.primary} onPress={() => setLoadError(false)}>
@@ -147,7 +148,7 @@ export default function App() {
           startInLoadingState
           renderLoading={() => (
             <View style={styles.loading}>
-              <ActivityIndicator size="large" />
+              <Image source={require("./assets/logo.png")} style={styles.brandLogo} resizeMode="contain" />
               <Text style={styles.loadingText}>A ligar ao BRILHAH AI Manager…</Text>
             </View>
           )}
@@ -175,6 +176,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#07101d" },
   webview: { flex: 1, backgroundColor: "#07101d" },
   loading: { ...StyleSheet.absoluteFillObject, backgroundColor: "#07101d", alignItems: "center", justifyContent: "center", gap: 14 },
+  brandLogo: { width: 168, height: 168, marginBottom: 6 },
   loadingText: { color: "#f4f7fb", fontSize: 14, fontWeight: "600" },
   error: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
   errorTitle: { color: "#fff", fontSize: 24, fontWeight: "800", marginBottom: 12 },
