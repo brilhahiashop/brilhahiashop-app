@@ -1,20 +1,36 @@
+import "react-native-url-polyfill/auto";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Linking,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createClient } from "@supabase/supabase-js";
 import { WebView } from "react-native-webview";
 import { SOCIAL_UI } from "./social-ai";
 
 const MANAGER_URL = "https://brilhah-ai-manager.vercel.app/";
 const SUPABASE_URL = "https://lnezqvonjcvhgaogndqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
+const ADMIN_EMAIL = "brilhahiashop+admin@gmail.com";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    flowType: "pkce",
+  },
+});
 
 const BRILHAH_UI = `
 (function(){
@@ -116,65 +132,212 @@ ${SOCIAL_UI}
 
 export default function App() {
   const webRef = useRef(null);
-  const pendingAuthUrl = useRef(null);
-  const authRetryTimer = useRef(null);
-  const webReady = useRef(false);
+  const [stage, setStage] = useState("loading");
+  const [message, setMessage] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [session, setSession] = useState(null);
   const [loadError, setLoadError] = useState(false);
-  const [managerUri, setManagerUri] = useState(MANAGER_URL);
+  const [busy, setBusy] = useState(false);
 
-  const tryDeliverAuthCallback = () => {
-    const value = pendingAuthUrl.current;
-    if (!value || !webRef.current || !webReady.current) return;
-    const encoded = JSON.stringify(value);
-    webRef.current.injectJavaScript(
-      `if(window.__brilhahFinishGoogleOAuth){window.__brilhahFinishGoogleOAuth(${encoded});} true;`
-    );
-    if (authRetryTimer.current) clearTimeout(authRetryTimer.current);
-    authRetryTimer.current = setTimeout(tryDeliverAuthCallback, 700);
+  const requireAdminSession = async (nextSession) => {
+    if (!nextSession?.user || String(nextSession.user.email || "").toLowerCase() !== ADMIN_EMAIL) {
+      await supabase.auth.signOut().catch(() => {});
+      throw new Error("Esta conta não é o administrador BRILHAH.");
+    }
+
+    const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal.error) throw aal.error;
+
+    setSession(nextSession);
+    if (aal.data?.currentLevel === "aal2") {
+      setStage("app");
+      return;
+    }
+
+    const factors = await supabase.auth.mfa.listFactors();
+    if (factors.error) throw factors.error;
+    const factor = (factors.data?.totp || []).find((x) => x.status === "verified");
+    if (!factor) throw new Error("Não encontrei o MFA antigo BRILHAH.");
+    setStage("mfa");
   };
 
-  const deliverAuthCallback = (url) => {
-    const value = String(url || "");
-    if (!value.startsWith("brilhah://auth/callback")) return;
-
+  const restoreSession = async () => {
     try {
-      const parsed = new URL(value);
-      const code = parsed.searchParams.get("code");
-      if (code) {
-        pendingAuthUrl.current = null;
-        webReady.current = false;
-        setManagerUri(MANAGER_URL + "#native_oauth_code=" + encodeURIComponent(code));
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!data?.session) {
+        setStage("email");
         return;
       }
-    } catch {}
+      await requireAdminSession(data.session);
+    } catch (e) {
+      setMessage(String(e.message || e));
+      setStage("email");
+    }
+  };
 
-    pendingAuthUrl.current = value;
-    tryDeliverAuthCallback();
+  const finishMagicLink = async (url) => {
+    try {
+      setBusy(true);
+      setMessage("A confirmar o acesso…");
+      const u = new URL(String(url || ""));
+      const hp = new URLSearchParams((u.hash || "").replace(/^#/, ""));
+      const errorText =
+        u.searchParams.get("error_description") ||
+        u.searchParams.get("error") ||
+        hp.get("error_description") ||
+        hp.get("error");
+      if (errorText) throw new Error(decodeURIComponent(errorText));
+
+      const code = u.searchParams.get("code");
+      const accessToken = u.searchParams.get("access_token") || hp.get("access_token");
+      const refreshToken = u.searchParams.get("refresh_token") || hp.get("refresh_token");
+
+      let nextSession = null;
+      if (code) {
+        const x = await supabase.auth.exchangeCodeForSession(code);
+        if (x.error) throw x.error;
+        nextSession = x.data?.session;
+      } else if (accessToken && refreshToken) {
+        const x = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (x.error) throw x.error;
+        nextSession = x.data?.session;
+      } else {
+        const x = await supabase.auth.getSession();
+        if (x.error) throw x.error;
+        nextSession = x.data?.session;
+      }
+
+      if (!nextSession) throw new Error("O link de acesso não criou uma sessão válida.");
+      setMessage("");
+      await requireAdminSession(nextSession);
+    } catch (e) {
+      setMessage(String(e.message || e));
+      setStage("email");
+    } finally {
+      setBusy(false);
+    }
   };
 
   useEffect(() => {
-    Linking.getInitialURL().then((url) => {
-      if (url) deliverAuthCallback(url);
-    }).catch(() => {});
-    const sub = Linking.addEventListener("url", ({ url }) => deliverAuthCallback(url));
+    restoreSession();
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url && String(url).startsWith("brilhah://auth/callback")) finishMagicLink(url);
+      })
+      .catch(() => {});
+
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      if (url && String(url).startsWith("brilhah://auth/callback")) finishMagicLink(url);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (nextSession) setSession(nextSession);
+    });
+
     return () => {
       sub.remove();
-      if (authRetryTimer.current) clearTimeout(authRetryTimer.current);
+      authListener?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  const sendAccessLink = async () => {
+    try {
+      setBusy(true);
+      setMessage("A enviar o link de acesso…");
+      const { error } = await supabase.auth.signInWithOtp({
+        email: ADMIN_EMAIL,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: "brilhah://auth/callback",
+        },
+      });
+      if (error) throw error;
+      setStage("waiting");
+      setMessage("Link enviado. Abre o email mais recente da BRILHAH e toca no link.");
+    } catch (e) {
+      const m = String(e.message || e);
+      setMessage(
+        m.toLowerCase().includes("rate limit")
+          ? "Foram pedidos vários emails. Aguarda alguns minutos e tenta novamente."
+          : m
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyMfa = async () => {
+    try {
+      setBusy(true);
+      setMessage("A confirmar MFA…");
+      const code = String(mfaCode || "").replace(/\D/g, "").slice(0, 6);
+      if (code.length !== 6) throw new Error("Introduz os 6 dígitos do Authenticator BRILHAH.");
+
+      const factors = await supabase.auth.mfa.listFactors();
+      if (factors.error) throw factors.error;
+      const factor = (factors.data?.totp || []).find((x) => x.status === "verified");
+      if (!factor) throw new Error("Não encontrei o MFA antigo BRILHAH.");
+
+      const challenge = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (challenge.error) throw challenge.error;
+
+      const verified = await supabase.auth.mfa.verify({
+        factorId: factor.id,
+        challengeId: challenge.data.id,
+        code,
+      });
+      if (verified.error) throw verified.error;
+
+      const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal.error) throw aal.error;
+      if (aal.data?.currentLevel !== "aal2") throw new Error("O MFA não ficou confirmado.");
+
+      const current = await supabase.auth.getSession();
+      if (current.error || !current.data?.session) {
+        throw current.error || new Error("Sessão inválida depois do MFA.");
+      }
+
+      setSession(current.data.session);
+      setMfaCode("");
+      setMessage("");
+      setStage("app");
+    } catch (e) {
+      setMessage(String(e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const injectManagerSession = () => {
+    const at = session?.access_token;
+    const rt = session?.refresh_token;
+    if (!at || !rt || !webRef.current) return;
+    const callback = "brilhah://auth/callback?access_token=" +
+      encodeURIComponent(at) + "&refresh_token=" + encodeURIComponent(rt);
+    const encoded = JSON.stringify(callback);
+
+    const js =
+      `(function(){
+        try{
+          if(window.__brilhahFinishGoogleOAuth){
+            window.__brilhahFinishGoogleOAuth(${encoded});
+          }
+        }catch(e){}
+      })(); true;`;
+
+    webRef.current.injectJavaScript(js);
+    setTimeout(() => webRef.current?.injectJavaScript(js), 700);
+    setTimeout(() => webRef.current?.injectJavaScript(js), 1600);
+  };
 
   const handleWebMessage = async ({ nativeEvent }) => {
     try {
       const msg = JSON.parse(nativeEvent.data || "{}");
-      if (msg?.type === "oauth-complete") {
-        pendingAuthUrl.current = null;
-        setManagerUri(MANAGER_URL);
-        if (authRetryTimer.current) {
-          clearTimeout(authRetryTimer.current);
-          authRetryTimer.current = null;
-        }
-        return;
-      }
       if (msg?.type !== "open-external") return;
       const url = String(msg.url || "");
       const allowed =
@@ -185,6 +348,87 @@ export default function App() {
       await Linking.openURL(url);
     } catch {}
   };
+
+  const logout = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    setSession(null);
+    setMfaCode("");
+    setMessage("");
+    setStage("email");
+  };
+
+  if (stage !== "app") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#07101d" />
+        <View style={styles.nativeAuth}>
+          <View style={styles.nativeCard}>
+            <Text style={styles.nativeBrand}>BRILHAH AI MANAGER</Text>
+            <Text style={styles.nativeTitle}>
+              {stage === "mfa" ? "Confirmar MFA" : "Acesso privado"}
+            </Text>
+            <Text style={styles.nativeSub}>
+              {stage === "mfa"
+                ? "Introduz o código atual do teu Authenticator BRILHAH."
+                : "Email BRILHAH + código MFA. Sem palavra-passe."}
+            </Text>
+
+            {stage === "loading" ? (
+              <View style={styles.nativeLoading}>
+                <ActivityIndicator size="large" />
+                <Text style={styles.nativeHint}>A verificar sessão…</Text>
+              </View>
+            ) : stage === "mfa" ? (
+              <>
+                <Text style={styles.nativeLabel}>Código MFA</Text>
+                <TextInput
+                  value={mfaCode}
+                  onChangeText={setMfaCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                  placeholder="000000"
+                  placeholderTextColor="#64748b"
+                  style={styles.nativeInput}
+                />
+                <TouchableOpacity
+                  style={[styles.nativePrimary, busy && styles.nativeDisabled]}
+                  onPress={verifyMfa}
+                  disabled={busy}
+                >
+                  <Text style={styles.nativePrimaryText}>
+                    {busy ? "A confirmar…" : "Entrar na APP"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.nativeLabel}>Email</Text>
+                <View style={styles.nativeEmailBox}>
+                  <Text style={styles.nativeEmail}>{ADMIN_EMAIL}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.nativePrimary, busy && styles.nativeDisabled]}
+                  onPress={sendAccessLink}
+                  disabled={busy}
+                >
+                  <Text style={styles.nativePrimaryText}>
+                    {busy ? "A enviar…" : stage === "waiting" ? "Reenviar link" : "Enviar link de acesso"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {!!message && (
+              <Text style={message.includes("enviado") || message.includes("Link enviado") ? styles.nativeOk : styles.nativeMsg}>
+                {message}
+              </Text>
+            )}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -197,45 +441,38 @@ export default function App() {
           <TouchableOpacity style={styles.primary} onPress={() => setLoadError(false)}>
             <Text style={styles.primaryText}>Tentar novamente</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryNative} onPress={logout}>
+            <Text style={styles.secondaryNativeText}>Terminar sessão</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <WebView
           ref={webRef}
-          source={{ uri: managerUri }}
+          source={{ uri: MANAGER_URL }}
           style={styles.webview}
           startInLoadingState
           renderLoading={() => (
             <View style={styles.loading}>
               <Image source={require("./assets/logo.png")} style={styles.brandLogo} resizeMode="contain" />
-              <Text style={styles.loadingText}>A ligar ao BRILHAH AI Manager…</Text>
+              <Text style={styles.loadingText}>A abrir o AI Manager completo…</Text>
             </View>
           )}
           injectedJavaScript={BRILHAH_UI}
           onLoadEnd={() => {
-            webReady.current = true;
             webRef.current?.injectJavaScript(BRILHAH_UI);
-            setTimeout(tryDeliverAuthCallback, 250);
-          }}
-          onLoadStart={() => {
-            webReady.current = false;
+            setTimeout(injectManagerSession, 250);
           }}
           onMessage={handleWebMessage}
           onShouldStartLoadWithRequest={(request) => {
             const url = String(request?.url || "");
-            const isSupabaseOAuth =
-              url.startsWith(SUPABASE_URL + "/auth/v1/authorize") ||
-              url.startsWith("https://accounts.google.com/");
-            if (isSupabaseOAuth) {
-              Linking.openURL(url).catch(() => {});
-              return false;
-            }
+            if (url.startsWith("brilhah://auth/callback")) return false;
             return true;
           }}
           onError={() => setLoadError(true)}
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.9"
+          userAgent="BRILHAH-AI-Manager/1.0.10"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
@@ -252,7 +489,88 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#07101d" },
   webview: { flex: 1, backgroundColor: "#07101d" },
-  loading: { ...StyleSheet.absoluteFillObject, backgroundColor: "#07101d", alignItems: "center", justifyContent: "center", gap: 14 },
+  nativeAuth: {
+    flex: 1,
+    backgroundColor: "#07101d",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  nativeCard: {
+    width: "100%",
+    maxWidth: 460,
+    backgroundColor: "#0f1a2d",
+    borderWidth: 1,
+    borderColor: "#2a3b58",
+    borderRadius: 24,
+    padding: 24,
+  },
+  nativeBrand: {
+    color: "#57d3d1",
+    fontWeight: "900",
+    letterSpacing: 2.1,
+    fontSize: 12,
+  },
+  nativeTitle: {
+    color: "#f8fafc",
+    fontSize: 34,
+    fontWeight: "800",
+    marginTop: 18,
+  },
+  nativeSub: {
+    color: "#94a3b8",
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 12,
+    marginBottom: 18,
+  },
+  nativeLabel: {
+    color: "#94a3b8",
+    fontSize: 13,
+    marginBottom: 7,
+    marginTop: 6,
+  },
+  nativeEmailBox: {
+    borderWidth: 1,
+    borderColor: "#2a3b58",
+    backgroundColor: "#07101d",
+    borderRadius: 13,
+    paddingVertical: 15,
+    paddingHorizontal: 14,
+  },
+  nativeEmail: { color: "#fff", fontSize: 16 },
+  nativeInput: {
+    borderWidth: 1,
+    borderColor: "#2a3b58",
+    backgroundColor: "#07101d",
+    color: "#fff",
+    borderRadius: 13,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    fontSize: 24,
+    letterSpacing: 8,
+    textAlign: "center",
+  },
+  nativePrimary: {
+    marginTop: 16,
+    backgroundColor: "#5d6dff",
+    borderRadius: 13,
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  nativeDisabled: { opacity: 0.55 },
+  nativePrimaryText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  nativeMsg: { color: "#ffb3b3", fontSize: 13, lineHeight: 19, marginTop: 14 },
+  nativeOk: { color: "#98d6ad", fontSize: 13, lineHeight: 19, marginTop: 14 },
+  nativeLoading: { alignItems: "center", paddingVertical: 22, gap: 12 },
+  nativeHint: { color: "#94a3b8", fontSize: 13 },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#07101d",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+  },
   brandLogo: { width: 168, height: 168, marginBottom: 6 },
   loadingText: { color: "#f4f7fb", fontSize: 14, fontWeight: "600" },
   error: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
@@ -260,4 +578,6 @@ const styles = StyleSheet.create({
   errorText: { color: "#c7d2e0", fontSize: 15, lineHeight: 22, textAlign: "center", marginBottom: 16 },
   primary: { marginTop: 12, width: "100%", backgroundColor: "#d8b36b", borderRadius: 12, paddingVertical: 13, alignItems: "center" },
   primaryText: { color: "#17120a", fontWeight: "800", fontSize: 14 },
+  secondaryNative: { marginTop: 10, width: "100%", borderWidth: 1, borderColor: "#2a3b58", borderRadius: 12, paddingVertical: 13, alignItems: "center" },
+  secondaryNativeText: { color: "#cbd5e1", fontWeight: "700", fontSize: 14 },
 });
