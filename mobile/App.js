@@ -115,6 +115,14 @@ ${SOCIAL_UI}
     var box=document.getElementById('loginBox');
     if(!box) return;
 
+    var publicDash=document.getElementById('publicDash');
+    var auth=document.getElementById('auth');
+    var app=document.getElementById('app');
+    if(publicDash) publicDash.classList.add('hidden');
+    box.classList.remove('hidden');
+    if(auth) auth.classList.remove('hidden');
+    if(app) app.classList.add('hidden');
+
     var oldLink=document.getElementById('passwordlessAdminLink');
     if(oldLink) oldLink.style.display='none';
 
