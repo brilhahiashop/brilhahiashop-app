@@ -17,7 +17,7 @@ import { createClient } from "@supabase/supabase-js";
 import { WebView } from "react-native-webview";
 import { SOCIAL_UI } from "./social-ai";
 
-const MANAGER_URL = "https://brilhah-ai-manager.vercel.app/";
+const MANAGER_URL = "https://lnezqvonjcvhgaogndqh.supabase.co/functions/v1/brilhah-manager-shell";
 const SUPABASE_URL = "https://lnezqvonjcvhgaogndqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bm64tpscRoPyieo2qQqpCQ_BNSX-TcC";
 const ADMIN_EMAIL = "brilhahiashop+admin@gmail.com";
@@ -188,7 +188,25 @@ export default function App() {
 
   useEffect(() => {
     restoreNativeSession();
+
+    const { data: authListener } = nativeSupabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "TOKEN_REFRESHED" && session) {
+          setManagerSession(session);
+          setWebSessionReady(false);
+          setWebAuthError("");
+        }
+        if (event === "SIGNED_OUT") {
+          setManagerSession(null);
+          setWebSessionReady(false);
+          setWebAuthError("");
+          setAuthStage("login");
+        }
+      }
+    );
+
     return () => {
+      authListener?.subscription?.unsubscribe?.();
       if (sessionRetryTimer.current) clearInterval(sessionRetryTimer.current);
       if (webAckTimer.current) clearTimeout(webAckTimer.current);
     };
@@ -422,6 +440,15 @@ export default function App() {
         return;
       }
 
+      if (msg?.type === "native-logout") {
+        await nativeSupabase.auth.signOut();
+        setManagerSession(null);
+        setWebSessionReady(false);
+        setWebAuthError("");
+        setAuthStage("login");
+        return;
+      }
+
       if (msg?.type !== "open-external") return;
       const url = String(msg.url || "");
       const allowed =
@@ -432,7 +459,10 @@ export default function App() {
     } catch {}
   };
 
-  const managerUri = MANAGER_URL;
+  const managerUri =
+    managerSession?.access_token
+      ? MANAGER_URL + "#access_token=" + encodeURIComponent(managerSession.access_token)
+      : MANAGER_URL;
 
   if (authStage !== "app") {
     return (
@@ -515,11 +545,9 @@ export default function App() {
               <Text style={styles.loadingText}>A ligar ao BRILHAH AI Manager…</Text>
             </View>
           )}
-          injectedJavaScriptBeforeContentLoaded={nativeSessionBootstrap}
           injectedJavaScript={BRILHAH_UI}
           onLoadEnd={() => {
             webRef.current?.injectJavaScript(BRILHAH_UI);
-            injectManagerSession();
           }}
           onMessage={handleWebMessage}
           onShouldStartLoadWithRequest={() => true}
@@ -527,7 +555,7 @@ export default function App() {
           onHttpError={({ nativeEvent }) => {
             if (nativeEvent.statusCode >= 500) setLoadError(true);
           }}
-          userAgent="BRILHAH-AI-Manager/1.0.16"
+          userAgent="BRILHAH-AI-Manager/1.0.17"
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
