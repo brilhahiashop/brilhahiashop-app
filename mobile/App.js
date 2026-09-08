@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Image,
   Linking,
@@ -52,7 +52,7 @@ ${SOCIAL_UI}
   function showRecovery(){
     openModal('Recuperar palavra-passe','<label class="br-label">Email</label><input id="br-rec-email" class="br-input" type="email" autocomplete="email" placeholder="o teu email"><button id="br-rec-send" class="br-primary" type="button">Enviar email de recuperação</button><div id="br-rec-msg" class="br-msg"></div><div class="br-note">Receberás um email seguro para recuperar o acesso. A BRILHAH nunca pede a tua palavra-passe por email.</div>');
     var emailInput=document.querySelector('input[type=email]');
-    document.getElementById('br-rec-email').value=(emailInput&&emailInput.value)||'brilhahiashop@gmail.com';
+    document.getElementById('br-rec-email').value=(emailInput&&emailInput.value)||'brilhahiashop+admin@gmail.com';
     document.getElementById('br-rec-send').onclick=async function(){
       var email=document.getElementById('br-rec-email').value.trim().toLowerCase();
       var msg=document.getElementById('br-rec-msg');
@@ -116,14 +116,40 @@ ${SOCIAL_UI}
 
 export default function App() {
   const webRef = useRef(null);
+  const pendingAuthUrl = useRef(null);
   const [loadError, setLoadError] = useState(false);
+
+  const deliverAuthCallback = (url) => {
+    const value = String(url || "");
+    if (!value.startsWith("brilhah://auth/callback")) return;
+    pendingAuthUrl.current = value;
+    if (webRef.current) {
+      const encoded = JSON.stringify(value);
+      webRef.current.injectJavaScript(
+        `window.__brilhahFinishGoogleOAuth && window.__brilhahFinishGoogleOAuth(${encoded}); true;`
+      );
+      pendingAuthUrl.current = null;
+    }
+  };
+
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => {
+      if (url) deliverAuthCallback(url);
+    }).catch(() => {});
+    const sub = Linking.addEventListener("url", ({ url }) => deliverAuthCallback(url));
+    return () => sub.remove();
+  }, []);
 
   const handleWebMessage = async ({ nativeEvent }) => {
     try {
       const msg = JSON.parse(nativeEvent.data || "{}");
       if (msg?.type !== "open-external") return;
       const url = String(msg.url || "");
-      if (!url.startsWith("https://account.buffer.com/") && !url.startsWith("https://publish.buffer.com/")) return;
+      const allowed =
+        url.startsWith("https://account.buffer.com/") ||
+        url.startsWith("https://publish.buffer.com/") ||
+        url.startsWith(SUPABASE_URL + "/auth/v1/authorize");
+      if (!allowed) return;
       await Linking.openURL(url);
     } catch {}
   };
@@ -153,7 +179,16 @@ export default function App() {
             </View>
           )}
           injectedJavaScript={BRILHAH_UI}
-          onLoadEnd={() => webRef.current?.injectJavaScript(BRILHAH_UI)}
+          onLoadEnd={() => {
+            webRef.current?.injectJavaScript(BRILHAH_UI);
+            if (pendingAuthUrl.current) {
+              const encoded = JSON.stringify(pendingAuthUrl.current);
+              webRef.current?.injectJavaScript(
+                `window.__brilhahFinishGoogleOAuth && window.__brilhahFinishGoogleOAuth(${encoded}); true;`
+              );
+              pendingAuthUrl.current = null;
+            }
+          }}
           onMessage={handleWebMessage}
           onError={() => setLoadError(true)}
           onHttpError={({ nativeEvent }) => {
