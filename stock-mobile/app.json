@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "BRILHAH Stock",
+    "slug": "brilhah-stock",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1524"
+    },
+    "android": {
+      "package": "com.brilhah.stock",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0D1524"
+      }
+    }
+  }
+}
