@@ -40,7 +40,12 @@ export const ORDER_STATUS = [
 
 export const money = v => `${Number(v || 0).toFixed(2).replace('.', ',')} €`;
 export const available = v => Number(v?.quantity_on_hand || 0) - Number(v?.quantity_reserved || 0);
-export const unitCost = v => Number(v?.purchase_cost ?? v?.item?.landed_cost ?? v?.item?.purchase_cost ?? 0);
+export const unitCost = v => {
+  const variantCost = v?.purchase_cost;
+  if (variantCost !== null && variantCost !== undefined && variantCost !== '') return Number(variantCost || 0);
+  const landed = Number(v?.item?.landed_cost || 0);
+  return landed > 0 ? landed : Number(v?.item?.purchase_cost || 0);
+};
 export const unitPrice = v => Number(v?.sale_price ?? v?.item?.sale_price ?? 0);
 export const date = v => { try { return v ? new Date(v).toLocaleDateString('pt-PT') : '—'; } catch { return '—'; } };
 export const datetime = v => { try { return v ? new Date(v).toLocaleString('pt-PT',{dateStyle:'short',timeStyle:'short'}) : '—'; } catch { return '—'; } };
