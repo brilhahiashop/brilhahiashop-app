@@ -1,0 +1,71 @@
+name: Build BRILHAH Stock Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "stock-mobile/**"
+      - ".github/workflows/stock-android-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    defaults:
+      run:
+        working-directory: stock-mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: stock-mobile/package.json
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate Expo dependencies
+        run: npx expo install --check
+
+      - name: Generate Android native project
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Increase Gradle memory
+        run: |
+          printf "\norg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8\norg.gradle.parallel=false\norg.gradle.daemon=false\n" >> android/gradle.properties
+
+      - name: Build release APK
+        env:
+          NODE_ENV: production
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleRelease --no-daemon --max-workers=2
+
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk ../BRILHAH-Stock.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BRILHAH-Stock-Android
+          path: BRILHAH-Stock.apk
+          if-no-files-found: error
+          retention-days: 14
