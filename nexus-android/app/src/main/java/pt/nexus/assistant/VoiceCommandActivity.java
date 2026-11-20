@@ -1,45 +1,48 @@
 package pt.nexus.assistant;
-
+import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
-import android.content.Intent;
 import android.os.Bundle;
-import android.speech.RecognizerIntent;
-import android.speech.tts.TextToSpeech;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.view.Gravity;
-import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.Locale;
 
-/** Visible, tap-initiated speech. No hidden microphone recording or permanent listening. */
-public class VoiceCommandActivity extends Activity {
-    private static final int VOICE=114;
-    @Override public void onCreate(Bundle b){super.onCreate(b);
-        getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        WindowManager.LayoutParams lp=getWindow().getAttributes();lp.dimAmount=.19f;getWindow().setAttributes(lp);
-        TextView t=new TextView(this);t.setText("✦  NEXUS\n\nDiz o teu comando…");t.setTextColor(0xffd6f4ff);t.setTextSize(22);t.setGravity(Gravity.CENTER);t.setPadding(26,42,26,42);t.setBackgroundColor(0xee071c32);setContentView(t);
-        try{
-            Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"pt-PT");
-            i.putExtra(RecognizerIntent.EXTRA_PROMPT,"NEXUS — fala agora");
-            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
-            startActivityForResult(i,VOICE);
-        }catch(ActivityNotFoundException e){Toast.makeText(this,"Reconhecimento de voz indisponível no telemóvel.",Toast.LENGTH_LONG).show();finish();}
-    }
-    @Override protected void onActivityResult(int code,int result,Intent data){super.onActivityResult(code,result,data);
-        if(code==VOICE&&result==RESULT_OK&&data!=null){
-            ArrayList<String> results=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            if(results!=null&&!results.isEmpty()){
-                String answer=CommandRouter.dispatch(this,results.get(0));
-                Toast.makeText(this,answer,Toast.LENGTH_SHORT).show();
-            }
-        }
-        finish();
-    }
+/** A transparent, tap-initiated NEXUS listener. Never launches the Google dialog. */
+public final class VoiceCommandActivity extends Activity {
+ private SpeechCapture capture;
+ private boolean done=false;
+ @Override public void onCreate(Bundle b){super.onCreate(b);
+  getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+  TextView status=new TextView(this);status.setTag("nexus");
+  status.setText("◉  NEXUS · ESTOU A OUVIR");status.setTextColor(0xffa6eaff);status.setTextSize(15);
+  status.setGravity(Gravity.CENTER);status.setPadding(14,16,14,16);
+  status.setBackgroundColor(0x990b2039);setContentView(status);
+  getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT,WindowManager.LayoutParams.WRAP_CONTENT);
+  getWindow().setGravity(Gravity.BOTTOM);
+  if(android.os.Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED)
+    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},710);
+  else startListening(status);
+ }
+ private void startListening(TextView status){
+  capture=SpeechCapture.start(this,new SpeechCapture.Callback(){
+   @Override public void onStatus(String s){status.setText("◉ NEXUS · "+("thinking".equals(s)?"A PROCESSAR":"ESTOU A OUVIR"));}
+   @Override public void onText(String raw){if(done)return;done=true;
+    if(!ReminderManager.maybeHandle(VoiceCommandActivity.this,raw,msg->{
+     Toast.makeText(VoiceCommandActivity.this,msg,Toast.LENGTH_LONG).show();
+    })){
+     String result=CommandRouter.dispatch(VoiceCommandActivity.this,raw);
+     Toast.makeText(VoiceCommandActivity.this,result,Toast.LENGTH_SHORT).show();
+     finish();
+    }else { /* May be showing native date/time confirmation; keep this activity alive. */ }
+   }
+   @Override public void onError(String msg){if(!done){done=true;Toast.makeText(VoiceCommandActivity.this,msg,Toast.LENGTH_SHORT).show();finish();}}
+  });
+ }
+ @Override public void onRequestPermissionsResult(int code,String[] perms,int[] results){
+  super.onRequestPermissionsResult(code,perms,results);
+  if(code==710){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)startListening((TextView)((android.view.ViewGroup)findViewById(android.R.id.content)).getChildAt(0));else{Toast.makeText(this,"Permite o microfone para falar com o NEXUS.",Toast.LENGTH_LONG).show();finish();}}
+ }
+ @Override protected void onDestroy(){if(capture!=null)capture.close();super.onDestroy();}
 }

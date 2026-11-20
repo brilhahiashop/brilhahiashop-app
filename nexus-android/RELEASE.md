@@ -1,11 +1,11 @@
-NEXUS 0.4.0 — APK experimental instalável.
-
-Interface e avatar incluídos no APK, carregados por origem HTTPS local sem depender do site. Voz nativa Android com saudação; reconhecimento após toque; pedidos autenticados ao servidor existente, com histórico da sessão e pesquisa. Código de acesso cifrado no Android Keystore, nunca incluído no APK. Painéis com rotação e navegação por toque. Botão flutuante existente preservado. Minimizar interrompe voz e pedidos. Sair remove também o serviço e sensor.
-
-Validação: compilação Android, Android Lint e testes automáticos da interface no navegador. O teste instrumentado em emulador Android 35 é executado no CI, mas pode não concluir se o emulador se desligar; nesse caso a validação no dispositivo físico continua pendente.
-
-Limitações: avatar ilustrado animado, sem modelo facial 3D nem lip-sync real; sem gestos por câmara; sensor de proximidade experimental existente. Sem escuta contínua em segundo plano. Sem novas integrações de contas empresariais. Motor remoto requer código privado existente e serviço disponível. Servidor validado com resposta autenticada e meteorologia com dados estruturados. Fala, reconhecimento, intents e overlay exigem validação no telemóvel. O histórico desta sessão não sincroniza entre dispositivos.
-
-Primeira utilização: abrir o APK, autorizar instalação se solicitado, introduzir o código privado do NEXUS em MENU > Código de acesso. Não inserir chave OpenAI. Para o botão flutuante, autorizar Mostrar sobre outras apps e tocar novamente em FLUTUANTE. É necessário um motor de voz Android com voz portuguesa. O botão VOZ utiliza o serviço de reconhecimento do Android, cuja política de dados depende do fornecedor.
-
-APK debug: assinatura de teste gerada no CI. Pode ser necessário desinstalar a versão anterior antes de instalar; isso apaga os dados locais. Não é versão verificada pela Play Store. Não foram alterados ficheiros da BRILHAH.
+# NEXUS Android 0.5.0 — Voz e lembretes
+- Reconhecimento por voz integrado através de SpeechRecognizer, sem ecrã externo de reconhecimento da Google.
+- Comandos de agenda e lembretes guardados localmente no dispositivo.
+- Alarmes locais com notificação; anúncio falado apenas quando o telefone está no modo de som normal, com volume de notificações ativo e sem modo Não Incomodar.
+- No modo silêncio ou vibração, não inicia síntese de voz para o lembrete.
+- Reprogramação dos lembretes após reiniciar, quando suportado pelo sistema e pelas permissões.
+- Pedido de autorização para notificações e aviso sobre a permissão de alarmes exatos.
+- Eventos do calendário podem ser preparados no calendário do telemóvel, necessitando da confirmação do utilizador para guardar.
+- Mantém o holograma, a interface offline e os comandos para abrir aplicações.
+- O reconhecimento de voz utiliza o serviço configurado no Android; se não houver reconhecimento no dispositivo, poderá usar o motor da Google e as respetivas políticas de dados.
+- Requer teste em telemóvel real para validar notificações, áudio agendado e política de bateria do fabricante.

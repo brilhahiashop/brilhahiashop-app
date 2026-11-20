@@ -70,6 +70,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.4.0.apk
-          sha256sum NEXUS-Android-v0.4.0.apk > SHA256SUMS.txt
-          gh release create nexus-android-v0.4.0 NEXUS-Android-v0.4.0.apk SHA256SUMS.txt --target "$GITHUB_SHA" --prerelease --title "NEXUS Android 0.4.0 — interface local e voz nativa" --notes-file nexus-android/RELEASE.md
+          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.5.0.apk
+          sha256sum NEXUS-Android-v0.5.0.apk > SHA256SUMS.txt
+          gh release create nexus-android-v0.5.0 NEXUS-Android-v0.5.0.apk SHA256SUMS.txt --target "$GITHUB_SHA" --prerelease --title "NEXUS Android 0.5.0 — voz integrada e lembretes locais" --notes-file nexus-android/RELEASE.md
