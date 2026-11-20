@@ -5,8 +5,8 @@
 - Um avatar NEXUS central e apenas dois controlos de uso diário: falar e escrever.
 - Carrossel holográfico 3D abaixo do avatar: a opção central pode ser executada; deslizar ou tocar nas opções laterais roda o carrossel.
 - Pesquisa, agenda, aplicações e outras intenções selecionam automaticamente a função correspondente ao comando falado ou escrito.
-- Respostas curtas num painel compacto que não tapa o carrossel; resposta completa e fontes num toque.
-- O menu discreto conserva as opções menos frequentes: mãos livres, operador, gestos, aprendizagem, 3D, botão flutuante, permissões, diagnóstico e saída.
+- Respostas num painel compacto que não tapa o carrossel; resposta completa e fontes num toque.
+- O menu discreto conserva opções menos frequentes: mãos livres, operador, gestos, aprendizagem, 3D, botão flutuante, permissões, diagnóstico e saída.
 
 ## Funcionalidades e restrições
 - Preserva o motor local de chamadas, alarmes, mensagens, pesquisa pública, tarefas, voz e aprendizagem da 1.0.
