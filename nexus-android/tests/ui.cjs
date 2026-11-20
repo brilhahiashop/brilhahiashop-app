@@ -35,6 +35,7 @@ await page.waitForTimeout(500);
 assert.equal(await page.locator('canvas.avatar-canvas').count(),1);
 assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
 assert.equal(await page.locator('#photoRig').count(),1);
+await page.locator('#closePanel').click(); // Results overlay correctly takes precedence over background HUD.
 await page.locator('#hudApps').click();assert.equal(await page.evaluate(()=>calls.at(-1)),'apps');
 await page.locator('#hudAgenda').click();assert.equal(await page.evaluate(()=>calls.at(-1)),'reminders');
 await page.locator('#operatorBtn').click();assert.equal(await page.evaluate(()=>calls.at(-1)),'operator');
