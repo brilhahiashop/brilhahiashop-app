@@ -1,0 +1,47 @@
+name: Compilar NEXUS Android (APK)
+on:
+  push:
+    branches: [nexus-android-release]
+    paths:
+      - 'nexus-android/**'
+      - '.github/workflows/nexus-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Preparar código do NEXUS
+        run: |
+          base64 -d nexus-android/project.zip.b64 > /tmp/nexus-project.zip
+          unzip -oq /tmp/nexus-project.zip -d nexus-android
+      - name: Build debug APK
+        run: gradle -p nexus-android :app:assembleDebug --stacktrace --no-daemon
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-Android-APK
+          path: nexus-android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+      - name: Publicar APK descarregável
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.1.0.apk
+          if gh release view "nexus-android-v0.1.0" >/dev/null 2>&1; then
+            gh release upload "nexus-android-v0.1.0" NEXUS-Android-v0.1.0.apk --clobber
+          else
+            gh release create "nexus-android-v0.1.0" NEXUS-Android-v0.1.0.apk --target "${GITHUB_SHA}" \
+              --title "NEXUS Android v0.1.0" --notes "APK de teste: interface holográfica, comandos por voz, abertura de apps e botão flutuante. Requer autorização para mostrar sobre outras apps. Não força o fecho de aplicações."
+          fi
