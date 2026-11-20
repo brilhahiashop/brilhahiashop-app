@@ -2,7 +2,7 @@ NEXUS 0.4.0 — APK experimental instalável.
 
 Interface e avatar incluídos no APK, carregados por origem HTTPS local sem depender do site. Voz nativa Android com saudação; reconhecimento após toque; pedidos autenticados ao servidor existente, com histórico da sessão e pesquisa. Código de acesso cifrado no Android Keystore, nunca incluído no APK. Painéis com rotação e navegação por toque. Botão flutuante existente preservado. Minimizar interrompe voz e pedidos. Sair remove também o serviço e sensor.
 
-Validação antes da publicação: compilação, Android Lint e teste instrumentado Android 35 de abertura offline, imagem local, ponte nativa, navegação de painéis, recarregamento e estado de paragem.
+Validação: compilação Android, Android Lint e testes automáticos da interface no navegador. O teste instrumentado em emulador Android 35 é executado no CI, mas pode não concluir se o emulador se desligar; nesse caso a validação no dispositivo físico continua pendente.
 
 Limitações: avatar ilustrado animado, sem modelo facial 3D nem lip-sync real; sem gestos por câmara; sensor de proximidade experimental existente. Sem escuta contínua em segundo plano. Sem novas integrações de contas empresariais. Motor remoto requer código privado existente e serviço disponível. Servidor validado com resposta autenticada e meteorologia com dados estruturados. Fala, reconhecimento, intents e overlay exigem validação no telemóvel. O histórico desta sessão não sincroniza entre dispositivos.
 
