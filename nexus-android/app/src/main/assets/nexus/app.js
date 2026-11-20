@@ -2,7 +2,7 @@
 const $=s=>document.querySelector(s), avatarWrap=$('#avatarWrap'),stateText=$('#stateText'),panel=$('#panel'),notice=$('#notice');
 let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false;
 const native=window.NexusNative, labels={idle:'TOCA PARA FALAR',thinking:'A PENSAR',speaking:'A RESPONDER',listening:'ESTOU A OUVIR'};
-function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(value);state=value;avatarWrap.className='avatar-wrap state-'+value;stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
+function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(value);state=value;avatarWrap.classList.remove('state-idle','state-thinking','state-speaking','state-listening');avatarWrap.classList.add('state-'+value);stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
 window.nexusVoiceState=setState;
 window.nexusGreeting=text=>{notice.textContent=text;};
 window.nexusFeedback=text=>{notice.textContent=text;};
