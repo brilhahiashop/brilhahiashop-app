@@ -12,7 +12,7 @@ final class NexusIntent {
   return Normalizer.normalize((s==null?"":s).toLowerCase(new Locale("pt","PT")),Normalizer.Form.NFD)
    .replaceAll("\\p{M}+","").replaceAll("[!?.,:;]"," ").replaceAll("\\s+"," ").trim();
  }
- static String strip(String x){return norm(x).replaceFirst("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos)\\s*","")
+ static String strip(String x){return norm(x).replaceFirst("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos|anexos)\\s*","")
   .replaceFirst("^(?:por favor\\s+)?(?:(?:podes|poderias|consegues|queria que|quero que)\\s+)?","").trim();}
  static boolean isQuestionAboutHow(String q){
   return q.matches("^(como|porque|por que|de que forma|o que acontece se|explica como|ensina me como)\\s+.*");
