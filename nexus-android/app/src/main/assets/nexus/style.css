@@ -284,3 +284,11 @@ html,body{margin:0!important;padding:0!important;width:100%;height:100%;overflow
  .nexus-minimal .panel.expanded{inset:58px 4% 74px 4%!important;max-height:none!important}
 }
 @media(prefers-reduced-motion:reduce){.nexus-minimal .orbit-motion{animation:none!important}}
+
+
+/* Dissolve rectangular photo edges into the NEXUS holographic field. */
+.nexus-minimal .avatar-wrap .avatar{
+ -webkit-mask-image:radial-gradient(ellipse 67% 76% at 50% 48%,#000 43%,rgba(0,0,0,.92) 62%,rgba(0,0,0,.46) 76%,transparent 99%);
+ mask-image:radial-gradient(ellipse 67% 76% at 50% 48%,#000 43%,rgba(0,0,0,.92) 62%,rgba(0,0,0,.46) 76%,transparent 99%);
+}
+.nexus-minimal .avatar-wrap:focus-visible{outline:1px solid #91f5ff;border-radius:16px}
