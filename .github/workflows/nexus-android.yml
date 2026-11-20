@@ -42,10 +42,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.1.0.apk
-          if gh release view "nexus-android-v0.1.0" >/dev/null 2>&1; then
-            gh release upload "nexus-android-v0.1.0" NEXUS-Android-v0.1.0.apk --clobber
+          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.2.0.apk
+          if gh release view "nexus-android-v0.2.0" >/dev/null 2>&1; then
+            gh release upload "nexus-android-v0.2.0" NEXUS-Android-v0.2.0.apk --clobber
           else
-            gh release create "nexus-android-v0.1.0" NEXUS-Android-v0.1.0.apk --target "${GITHUB_SHA}" \
-              --title "NEXUS Android v0.1.0" --notes "APK de teste: interface holográfica, comandos por voz, abertura de apps e botão flutuante. Requer autorização para mostrar sobre outras apps. Não força o fecho de aplicações."
+            gh release create "nexus-android-v0.2.0" NEXUS-Android-v0.2.0.apk --target "${GITHUB_SHA}" \
+              --title "NEXUS Android v0.2.0" --notes "APK de teste: interface holográfica, comandos por voz, abertura de apps e botão flutuante. Requer autorização para mostrar sobre outras apps. Não força o fecho de aplicações."
           fi
