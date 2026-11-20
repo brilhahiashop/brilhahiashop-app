@@ -1,11 +1,15 @@
-# NEXUS Android 0.5.0 — Voz e lembretes
-- Reconhecimento por voz integrado através de SpeechRecognizer, sem ecrã externo de reconhecimento da Google.
-- Comandos de agenda e lembretes guardados localmente no dispositivo.
-- Alarmes locais com notificação; anúncio falado apenas quando o telefone está no modo de som normal, com volume de notificações ativo e sem modo Não Incomodar.
-- No modo silêncio ou vibração, não inicia síntese de voz para o lembrete.
-- Reprogramação dos lembretes após reiniciar, quando suportado pelo sistema e pelas permissões.
-- Pedido de autorização para notificações e aviso sobre a permissão de alarmes exatos.
-- Eventos do calendário podem ser preparados no calendário do telemóvel, necessitando da confirmação do utilizador para guardar.
-- Mantém o holograma, a interface offline e os comandos para abrir aplicações.
-- O reconhecimento de voz utiliza o serviço configurado no Android; se não houver reconhecimento no dispositivo, poderá usar o motor da Google e as respetivas políticas de dados.
-- Requer teste em telemóvel real para validar notificações, áudio agendado e política de bateria do fabricante.
+# NEXUS Android 0.5.1 — Correção de regressão
+
+Corrige o bloqueio identificado na versão 0.5.0: quando o reconhecimento passava para o estado "A pensar", a interface recusava submeter o próprio pedido.
+
+- Conversa por voz novamente enviada à IA após reconhecimento, com controlo de pedidos em curso separado do estado visual.
+- Comandos locais, incluindo "abre Instagram" e "abre Facebook", funcionam também quando escritos pelo teclado.
+- Reconhecimento de apps com aliases para as principais aplicações.
+- "NEXUS, apresenta-te" respondido localmente, sem depender do AI Gateway.
+- Saudação mostrada na interface ao iniciar e falada quando a voz Android estiver disponível.
+- Voz portuguesa com tentativa alternativa e opção "Testar voz e saudação" no menu.
+- Indicadores "Ouvi: ..." e mensagens de diagnóstico em erros do reconhecimento.
+- Testes automáticos para a regressão de voz e comandos do teclado.
+- Mantém lembretes, avatar holográfico, janelas e painel flutuante.
+
+A versão continua a necessitar de testes no equipamento físico para volume, permissões, serviços de voz e comportamento de apps de terceiros.

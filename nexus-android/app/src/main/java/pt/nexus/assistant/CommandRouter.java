@@ -77,6 +77,26 @@ public final class CommandRouter {
         List<ResolveInfo> list=pm.queryIntentActivities(search,PackageManager.MATCH_ALL);
         String cleanTerm=plain(term);
         if(cleanTerm.isEmpty()) return null;
+        String[] known;
+        switch(cleanTerm){
+          case "facebook": known=new String[]{"com.facebook.katana","com.facebook.lite"};break;
+          case "instagram": known=new String[]{"com.instagram.android","com.instagram.lite"};break;
+          case "whatsapp": known=new String[]{"com.whatsapp","com.whatsapp.w4b"};break;
+          case "youtube": known=new String[]{"com.google.android.youtube"};break;
+          case "spotify": known=new String[]{"com.spotify.music"};break;
+          case "chrome": known=new String[]{"com.android.chrome"};break;
+          case "google maps": case "maps": case "mapas": known=new String[]{"com.google.android.apps.maps"};break;
+          case "gmail": known=new String[]{"com.google.android.gm"};break;
+          case "tiktok": known=new String[]{"com.zhiliaoapp.musically"};break;
+          case "messenger": known=new String[]{"com.facebook.orca"};break;
+          default: known=new String[0];
+        }
+        for(String pkg:known){
+          Intent launch=pm.getLaunchIntentForPackage(pkg);
+          if(launch!=null){launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+           try{activity.startActivity(launch);return term;}catch(Exception ignored){}
+          }
+        }
         ResolveInfo best=null;
         int score=0;
         for(ResolveInfo info:list){
