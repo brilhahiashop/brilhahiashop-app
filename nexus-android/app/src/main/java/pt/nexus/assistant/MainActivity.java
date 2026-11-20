@@ -22,7 +22,7 @@ public class MainActivity extends Activity {
  private ExecutorService worker=Executors.newSingleThreadExecutor();
  private LinearLayout root;
  @Override public void onCreate(Bundle state){super.onCreate(state);
-  root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(0xff061221);
+  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xff061221);
   web=new WebView(this);web.setBackgroundColor(0xff061221);
   WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   web.addJavascriptInterface(new Bridge(),"NexusNative");
