@@ -417,9 +417,9 @@ public class MainActivity extends Activity {
   if(web!=null)web.onResume();
   if(loaded)js("nexusHandsFreeState("+HandsFreeService.active+")");
   boolean returningWithCommand=pendingHandsFree!=null||pendingQuestion!=null;
-  if(HandsFreeService.active&&!returningWithCommand){
+  if(HandsFreeService.active){
    continuous=true;js("nexusConversationState(true)");
-   voiceHandler.postDelayed(()->{if(foreground&&!closed&&continuous&&capture==null)listen();},700);
+   if(!returningWithCommand)voiceHandler.postDelayed(()->{if(foreground&&!closed&&continuous&&capture==null)listen();},700);
   }
   greet();
   if(loaded&&pendingQuestion!=null){String q=pendingQuestion;pendingQuestion=null;js("nexusReceiveQuestion("+JSONObject.quote(q)+")");}
