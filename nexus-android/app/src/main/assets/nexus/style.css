@@ -298,3 +298,6 @@ html,body{margin:0!important;padding:0!important;width:100%;height:100%;overflow
 .nexus-minimal .state{bottom:126px!important}
 .nexus-minimal .notice{bottom:168px!important;max-height:44px}
 @media(max-height:680px){.nexus-minimal .state{bottom:108px!important}.nexus-minimal .notice{bottom:142px!important}}
+
+/* Fixed orbit and result panels use the device viewport rather than a transformed ancestor. */
+.nexus-minimal .stage{perspective:none!important;transform:none!important}
