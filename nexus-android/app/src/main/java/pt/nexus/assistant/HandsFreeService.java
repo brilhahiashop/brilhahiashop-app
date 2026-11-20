@@ -159,7 +159,7 @@ public final class HandsFreeService extends Service {
     tell("Modo mãos-livres desligado.",true);return;
   }
   if(q.matches(".*\\b(sair do nexus|fecha o nexus|desliga o nexus)\\b.*")){
-    stopService(new Intent(this,BubbleService.class));stopService(new Intent(this,ReminderSpeechService.class));tell("NEXUS encerrado.",true);return;
+    getSharedPreferences("privacy",0).edit().putBoolean("exited",true).apply();stopService(new Intent(this,BubbleService.class));stopService(new Intent(this,ReminderSpeechService.class));tell("NEXUS encerrado.",true);return;
   }
   if(q.matches("^(volta|regressa|mostra|abre|muda para|ir para|vai para)\\s+(ao?\\s+|para\\s+)?(nexus|assistente|nexos)$")){
     boolean ok=openNexus(null);if(ok)tell("Voltei ao NEXUS.",false);else tell("Não consegui abrir o NEXUS. Usa o botão flutuante.",false);
