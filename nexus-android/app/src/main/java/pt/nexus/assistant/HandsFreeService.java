@@ -32,7 +32,7 @@ public final class HandsFreeService extends Service {
  private boolean running=false,appVisible=false,speaking=false,listening=false;
  private long endsAt=0;
  private int errors=0;
- private String lastStatus="A iniciar…";
+ private String lastStatus="A iniciar…";private volatile String queuedCommand=null;
  private final Runnable restart=this::listen;
  private final Runnable timeout=()->{if(running){update("Sessão terminada após 15 minutos.");stopSelf();}};
  @Override public IBinder onBind(Intent intent){return null;}
@@ -76,7 +76,8 @@ public final class HandsFreeService extends Service {
   return START_NOT_STICKY;
  }
  private Notification notification(String status){
-  Intent open=new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+  Intent open=new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+  if(queuedCommand!=null)open.putExtra("hands_free_utterance",queuedCommand);
   PendingIntent main=PendingIntent.getActivity(this,340,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   Intent stopIntent=new Intent(this,HandsFreeService.class).setAction(ACTION_STOP);
   PendingIntent stop=PendingIntent.getService(this,341,stopIntent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -95,7 +96,7 @@ public final class HandsFreeService extends Service {
  }
  private void setVisible(boolean visible){
   appVisible=visible;
-  if(visible){ui.removeCallbacks(restart);if(tts!=null)tts.stop();speaking=false;releaseRecognizer();update("Em pausa enquanto o NEXUS está aberto.");}
+  if(visible){queuedCommand=null;ui.removeCallbacks(restart);if(tts!=null)tts.stop();speaking=false;releaseRecognizer();update("A usar o NEXUS no ecrã · microfone em pausa no serviço.");}
   else if(running)listenLater(700);
  }
  private void listenLater(long delay){
@@ -176,8 +177,8 @@ public final class HandsFreeService extends Service {
   if(natural.kind==NexusIntent.Kind.CALL||natural.kind==NexusIntent.Kind.MESSAGE
      ||natural.kind==NexusIntent.Kind.ALARM||natural.kind==NexusIntent.Kind.TIMER
      ||natural.kind==NexusIntent.Kind.RESEARCH){
-    if(openNexus(speech))update("A tratar do pedido na assistente.");
-    else tell("Não consegui abrir o NEXUS para concluir o pedido.",false);
+    if(openNexus(speech))update("A tratar do pedido · toca na notificação se o Android não abrir o NEXUS.");
+    else update("Abre a notificação do NEXUS para concluir o pedido.");
     return;
   }
   if(natural.kind==NexusIntent.Kind.BROWSER_SEARCH){
@@ -190,12 +191,20 @@ public final class HandsFreeService extends Service {
   String target=requestedApp(q);
   if(target!=null){
     boolean ok=launchApp(target);
-    tell(ok?"A abrir "+target+".":"Não consegui abrir "+target+". Podes usar o botão flutuante.",false);
+    if(ok){
+      // startActivity() can be silently blocked for a background process on Android.
+      queuedCommand=null;
+      update("Abertura de "+target+" solicitada · se não apareceu, toca na notificação.");
+      tell("Pedi ao Android para abrir "+target+". Se não apareceu, toca na notificação do NEXUS.",false);
+    }else{
+      openNexus(speech);
+      tell("Não consegui abrir diretamente "+target+". Toca na notificação para continuar.",false);
+    }
     return;
   }
   // Everything else is handed to the visible native NEXUS app for AI/reminders/teaching.
-  if(openNexus(speech)){update("A continuar conversa no NEXUS.");}
-  else tell("Não consegui voltar ao NEXUS. Toca na esfera flutuante.",false);
+  if(openNexus(speech)){update("A continuar a conversa · toca na notificação se necessário.");}
+  else update("Toca na notificação para continuar a conversa.");
  }
  static String requestedApp(String q){return CommandText.requestedApp(q);}
  private boolean startActivitySafe(Intent i){
@@ -234,6 +243,9 @@ public final class HandsFreeService extends Service {
   return i!=null&&startActivitySafe(i);
  }
  private boolean openNexus(String spoken){
+  queuedCommand=spoken;
+  // Notification PendingIntent is the supported path if Android blocks background activity starts.
+  update("Toca para continuar no NEXUS: "+(spoken==null?"assistente":spoken.substring(0,Math.min(65,spoken.length()))));
   Intent i=new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
   if(spoken!=null)i.putExtra("hands_free_utterance",spoken);
   return startActivitySafe(i);
