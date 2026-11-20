@@ -5,6 +5,13 @@ await page.route('https://appassets.androidplatform.net/**',route=>{const name=n
 await page.addInitScript(()=>{window.calls=[];window.NexusNative={ask:p=>calls.push(JSON.parse(p)),speak:t=>calls.push({spoken:t}),listen:()=>calls.push('listen'),command:t=>calls.push({command:t}),handsFree:()=>calls.push("handsFree"),handsFreeActive:()=>false,apps:()=>calls.push('apps'),reminders:()=>calls.push('reminders'),operator:()=>calls.push('operator'),stop:()=>{},menu:()=>{}}});
 await page.goto('https://appassets.androidplatform.net/index.html');await page.waitForFunction(()=>document.querySelector('.avatar').naturalWidth>0);
 assert.equal(await page.locator('#nexusOrbit .orbit-card').count(),5);
+assert.equal(await page.locator('#holoTranscript').count(),1);
+assert.equal(await page.locator('#nexusVoiceEnergy').count(),1);
+assert.equal(await page.locator('#photoRig').count(),0);
+await page.evaluate(()=>nexusBoot());
+assert((await page.locator('#nexusWelcome').textContent()).includes('NEXUS'));
+assert.equal(await page.locator('.mouth').count(),0);
+
 assert.equal(await page.locator('.legacy-controls').isVisible(),false);
 assert.equal(await page.locator('#talkBtn').isVisible(),true);
 assert.equal(await page.locator('.dock > button').count(),2);
@@ -70,14 +77,20 @@ await page.evaluate(()=>nexusAnswer({reply:'Wrong provider',weather:{city:'Viseu
 await page.waitForTimeout(500);
 assert.equal(await page.locator('canvas.avatar-canvas').count(),1);
 assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
-assert.equal(await page.locator('#photoRig').count(),1);
+assert.equal(await page.locator('#photoRig').count(),0);
 await page.locator('#closePanel').click(); // Results overlay correctly takes precedence over background HUD.
 await page.evaluate(()=>document.querySelector('#hudApps').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'apps');
 await page.evaluate(()=>document.querySelector('#hudAgenda').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'reminders');
 await page.evaluate(()=>document.querySelector('#operatorBtn').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'operator');
 await page.evaluate(()=>{nexusAvatarState('speaking');nexusSpeechRange('Olá André')});
 await page.waitForTimeout(140);
-assert(await page.locator('#photoRig').evaluate(e=>e.width>10&&e.height>10));
+assert.equal(await page.locator('#nexusVoiceEnergy').count(),1);
+await page.evaluate(()=>nexusVoiceState('speaking'));
+assert.equal(await page.locator('body').getAttribute('data-nexus-voice'),'speaking');
+await page.evaluate(()=>nexusSpeechLengthChanged(30));
+await page.evaluate(()=>nexusSpeechProgress(0,20));
+assert.equal(await page.locator('#holoTranscript').count(),1);
+await page.evaluate(()=>nexusVoiceState('idle'));
 await page.evaluate(()=>nexusAvatarState('idle'));
 await page.evaluate(()=>document.querySelector('#avatarMode').click());assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),true);
 await page.evaluate(()=>document.querySelector('#avatarMode').click());assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
