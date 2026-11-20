@@ -1,22 +1,31 @@
-# NEXUS Android 0.9.0 — Núcleo de ações e pesquisa
+# NEXUS Android 1.0.0 — Pesquisa universal experimental + Holograma interativo
 
-## Melhorias do cérebro
-- Unificação da entrada por voz e teclado: os dois passam pelo mesmo classificador local de intenções, com encaminhamento para a IA quando não se trata de comando local.
-- Pesquisa online a pedido: tenta obter resultados públicos atuais em RSS (Bing/Google Notícias), Wikipedia e receitas (TheMealDB), quando disponível; envia resumos de fontes verificáveis ao servidor de IA e mantém links no painel. Quando nenhuma fonte está acessível, não inventa resultados.
-- Distingue «abre o Google e pesquisa X» (abre navegador) de «pesquisa X e explica-me» (consulta fontes e responde na aplicação).
-- Compreensão de pedidos diretos para abrir aplicações, enviar mensagens (preparação), telefonar e criar despertadores/temporizadores no relógio Android.
-- Chamadas: escolhe o contacto associado ao nome/apelido uma vez pelo seletor Android; guarda localmente o número cifrado; pede confirmação para iniciar a chamada; depois pede permissão de telefone ou abre o marcador.
-- Mensagens: prepara mensagens na aplicação SMS do telemóvel, com confirmação no envio. Não envia automaticamente WhatsApp ou SMS.
-- Alarme/despertador: usa a app Relógio pelo intent oficial e pede confirmação nesse ecrã.
-- Comandos encadeados separados por «e depois» podem ser continuados explicitamente por «NEXUS, continua».
-- Memória de contexto durante a sessão ampliada de 8 para 16 entradas, incluindo respostas de ações locais. A voz foi ajustada para eliminar leituras de URLs e marcação Markdown.
+## Novo retrato e interação
+- Retrato holográfico local atualizado a partir da referência visual fornecida pelo utilizador. A fotografia está incorporada no APK; não depende da Internet.
+- Faixa de sete opções holográficas com aparência de profundidade: FALAR, APPS, PESQUISA, AGENDA, APRENDER, OPERADOR e SISTEMA.
+- Toca na opção central para executar; desliza ou usa as setas para selecionar. Os gestos por câmara já existentes também podem deslocar a seleção, com confirmação para executar.
+- A função correspondente ao pedido é destacada visualmente.
+- Resultados apresentados numa janela holográfica compacta, expansível; deixa parte do avatar visível em vez de ocupar todo o ecrã.
+- Remoção de textos decorativos de diagnóstico sem utilidade.
+- Mantém animação de boca aproximada durante a fala e alternativa 3D estilizada. Não é reconstrução facial 3D fotorrealista.
 
-## Preservado
-- Holograma visual com boca animada e 3D alternativo; mãos-livres; comandos de aplicações; serviço de Acessibilidade opcional; aprendizagem de rotinas; lembretes; gestos por câmara e botão flutuante.
+## Pesquisa online
+- Pesquisa genérica em várias fontes públicas em paralelo, com prazo global de aproximadamente 6 segundos.
+- Fontes disponíveis conforme o tema: resultados públicos Bing RSS, Google Notícias RSS, Bing News RSS, Wikipédia e receitas TheMealDB.
+- Fontes são apenas apresentadas se efetivamente recuperadas; uma pré-visualização aparece antes da síntese final da IA.
+- Perguntas atuais e factuais passam mais frequentemente pelo módulo de pesquisa, mantendo perguntas conversacionais simples no percurso normal.
+- O servidor recebe apenas a pergunta e excertos com URLs, sem áudio nem dados de contactos.
+- O NEXUS reconhece e corrige respostas genéricas do modelo que aleguem não ter Internet quando fontes foram recolhidas.
+- Quando nenhuma fonte responde, informa a limitação concreta e oferece ligação para pesquisar diretamente no Google.
+- Cache breve em memória para pesquisas repetidas. Conteúdos publicados na Internet podem estar incorretos/desatualizados.
 
-## Limites conhecidos
-- Não é possível garantir controlo irrestrito de todas as apps. Acessibilidade pode falhar em interfaces protegidas.
-- A pesquisa usa fontes públicas gratuitas, sujeitas a falha, alteração ou indisponibilidade. Não é a pesquisa integral do Google; fontes atuais só são citadas quando recuperadas.
-- O NEXUS nunca lê contactos sem seleção voluntária, não coloca chamadas sem confirmação e não envia mensagens nem efetua compras autonomamente.
-- A voz final depende do motor TTS instalado no Android. Não existe conversação humana perfeita nem animação facial 3D por fonemas.
-- Testar fisicamente comandos, permissões, pesquisa, contactos, alarmes e modo mãos-livres antes de confiar em tarefas essenciais.
+## Mantido da 0.9
+- Voz e mãos-livres em sessão autorizada, pesquisa, abertura de aplicações, chamadas com confirmação, alarmes, mensagens SMS preparadas, lembretes, memorização de rotinas, controlo por Acessibilidade e gestos por câmara.
+- Ao escolher SAIR, o NEXUS liberta câmara, microfone e recursos em uso.
+
+## Limites de segurança e funcionalidade
+- Não existe acesso garantido a toda a Web, nem navegação livre tipo browser automatizado: as fontes de pesquisa gratuitas podem falhar ou limitar o volume. O modelo trabalha apenas sobre excertos recuperados e pode cometer erros.
+- Não controla todas as funções de todas as apps; Android limita APIs e interfaces protegidas.
+- Chamadas requerem confirmação; envio de mensagens e pagamentos continuam a exigir confirmação do utilizador.
+- Não existe vídeo 3D fotorrealista de face tracking em tempo real. A imagem é um retrato com animação facial aproximada e painéis interativos.
+- Testes Android reais (rede móvel, WhatsApp, alarmes, contactos, câmara) requerem validação num dispositivo físico.

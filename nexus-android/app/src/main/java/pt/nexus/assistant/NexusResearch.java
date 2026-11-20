@@ -1,4 +1,5 @@
 package pt.nexus.assistant;
+
 import android.net.Uri;
 import org.json.*;
 import org.w3c.dom.*;
@@ -7,16 +8,19 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.*;
+import java.util.concurrent.*;
 
 /**
- * On-demand, bounded public-source lookup. No credentials or contacts leave the device.
- * Search is best-effort: free third-party sources can be unreachable or rate-limited.
+ * Local research aggregator. Concurrent lookups, strict HTTPS, safe XML, deadline, and
+ * source attribution. Providers are public best-effort feeds, not a guaranteed search API.
+ * No contact data, app inventory, microphone recordings, or credentials are transmitted.
  */
 final class NexusResearch {
  static final class Result {
   final String query;final JSONArray sources=new JSONArray();
+  final long checkedAt=System.currentTimeMillis();
   Result(String q){query=q;}
   String evidence(){
    StringBuilder b=new StringBuilder();
@@ -24,112 +28,179 @@ final class NexusResearch {
     JSONObject x=sources.optJSONObject(i);if(x==null)continue;
     b.append("\n").append(i+1).append(". Título: ").append(x.optString("title"))
      .append("\nURL: ").append(x.optString("url"))
-     .append("\nResumo: ").append(x.optString("snippet")).append("\n");
+     .append("\nResumo: ").append(x.optString("snippet"));
+    if(x.has("published"))b.append("\nPublicado em: ").append(x.optString("published"));
+    b.append("\n");
    }
    return b.toString();
   }
  }
+ static final class CacheEntry {
+  final Result value;final long moment=System.currentTimeMillis();
+  CacheEntry(Result r){value=r;}
+ }
+ private static final LinkedHashMap<String,CacheEntry> CACHE=new LinkedHashMap<String,CacheEntry>(20,.75f,true){
+  @Override protected boolean removeEldestEntry(Map.Entry<String,CacheEntry> eldest){return size()>16;}
+ };
  private static String clean(String s){
-  return (s==null?"":s).replaceAll("<[^>]+>"," ").replaceAll("(?is)\\s+"," ").trim();
+  return (s==null?"":s).replaceAll("<[^>]+>"," ").replaceAll("&nbsp;"," ")
+   .replaceAll("&amp;","&").replaceAll("&quot;","\"").replaceAll("&#39;","'")
+   .replaceAll("(?is)\\s+"," ").trim();
  }
  private static String bound(String s,int max){return s==null?"":s.substring(0,Math.min(s.length(),max));}
  private static byte[] fetch(String url,int cap) throws IOException {
-  URL u=new URL(url);if(!u.getProtocol().equals("https"))throw new IOException("HTTPS obrigatório");
+  URL u=new URL(url);if(!"https".equals(u.getProtocol()))throw new IOException("Só HTTPS");
   HttpsURLConnection c=(HttpsURLConnection)u.openConnection();
-  c.setConnectTimeout(4000);c.setReadTimeout(4500);c.setRequestProperty("Accept","application/rss+xml, application/json, text/xml");
-  c.setRequestProperty("User-Agent","NEXUSAndroid/0.9 (+local personal assistant)");
+  c.setInstanceFollowRedirects(false);
+  c.setConnectTimeout(2900);c.setReadTimeout(3300);
+  c.setRequestProperty("Accept","application/rss+xml,application/xml,application/json,text/xml");
+  c.setRequestProperty("User-Agent","Mozilla/5.0 (compatible; NEXUSAndroid/1.0; personal research)");
   try{
-   int status=c.getResponseCode();if(status<200||status>=300)throw new IOException("HTTP "+status);
+   int status=c.getResponseCode();if(status<200||status>=300)throw new IOException("Fonte HTTP "+status);
    ByteArrayOutputStream output=new ByteArrayOutputStream();
    try(InputStream in=c.getInputStream()){
-    byte[] buffer=new byte[4096];int count;while((count=in.read(buffer))!=-1){
-     if(output.size()+count>cap)throw new IOException("Fonte excedeu limite");
-     output.write(buffer,0,count);
+    byte[] buffer=new byte[4096];int n;
+    while((n=in.read(buffer))!=-1){
+     if(output.size()+n>cap)throw new IOException("Fonte excedeu limite");
+     output.write(buffer,0,n);
     }
    }
    return output.toByteArray();
   }finally{c.disconnect();}
  }
- private static boolean validUrl(String url){
-  if(url==null)return false;
-  try{Uri u=Uri.parse(url);return "https".equals(u.getScheme())&&u.getHost()!=null&&!u.getHost().isEmpty();}
-  catch(Exception e){return false;}
- }
- private static void add(Result r,String title,String link,String snippet,Set<String> used){
-  String t=bound(clean(title),170),d=bound(clean(snippet),650),url=bound(link,900);
-  if(!validUrl(url)||t.length()<3||used.contains(url)||r.sources.length()>=7)return;
-  JSONObject item=new JSONObject();
-  try{item.put("title",t);item.put("url",url);item.put("snippet",d);r.sources.put(item);used.add(url);}catch(Exception ignored){}
- }
- private static void rss(Result r,String url,Set<String> seen,int max){
+ private static boolean safeLink(String link){
+  if(link==null||link.length()>1200)return false;
   try{
-   byte[] bytes=fetch(url,270_000);
-   DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
-   factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
-   factory.setFeature("http://xml.org/sax/features/external-general-entities",false);
-   factory.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
-   factory.setXIncludeAware(false);factory.setExpandEntityReferences(false);
-   Document doc=factory.newDocumentBuilder().parse(new ByteArrayInputStream(bytes));
-   NodeList nodes=doc.getElementsByTagName("item");
-   for(int i=0;i<nodes.getLength()&&i<max&&r.sources.length()<7;i++){
-    Element el=(Element)nodes.item(i);
-    add(r,firstText(el,"title"),firstText(el,"link"),firstText(el,"description"),seen);
-   }
-  }catch(Exception ignored){/* A ausência de resultados não é sucesso. */}
+   Uri u=Uri.parse(link);
+   String h=u.getHost();
+   return "https".equalsIgnoreCase(u.getScheme())&&h!=null&&!h.isEmpty()&&
+     !h.equalsIgnoreCase("localhost")&&!h.endsWith(".local")&&!h.startsWith("192.168.")&&!h.startsWith("10.");
+  }catch(Exception e){return false;}
  }
- private static String firstText(Element el,String tag){
-  NodeList l=el.getElementsByTagName(tag);
-  return l.getLength()>0?l.item(0).getTextContent():"";
- }
- private static void wiki(Result r,String query,Set<String> seen){
+ private static void put(Result result,String title,String link,String summary,String date,Set<String> known){
+  String t=bound(clean(title),180),d=bound(clean(summary),850);
+  if(!safeLink(link)||t.length()<3||known.contains(link)||result.sources.length()>=12)return;
   try{
-   String link="https://pt.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=4&srsearch="+Uri.encode(query);
-   JSONObject root=new JSONObject(new String(fetch(link,160_000),StandardCharsets.UTF_8));
-   JSONArray search=root.getJSONObject("query").getJSONArray("search");
-   for(int i=0;i<search.length()&&r.sources.length()<7;i++){
-    JSONObject item=search.getJSONObject(i);
-    String title=item.optString("title"),snippet=item.optString("snippet");
-    add(r,title,"https://pt.wikipedia.org/wiki/"+Uri.encode(title.replace(' ','_')),snippet,seen);
-   }
+   JSONObject obj=new JSONObject().put("title",t).put("url",link).put("snippet",d);
+   if(date!=null&&!date.trim().isEmpty())obj.put("published",bound(clean(date),90));
+   result.sources.put(obj);known.add(link);
   }catch(Exception ignored){}
  }
- private static void meals(Result r,String query,Set<String> seen){
+ private static Document safeXml(byte[] data)throws Exception{
+  DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
+  f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
+  f.setFeature("http://xml.org/sax/features/external-general-entities",false);
+  f.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+  f.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd",false);
+  f.setXIncludeAware(false);f.setExpandEntityReferences(false);
+  return f.newDocumentBuilder().parse(new ByteArrayInputStream(data));
+ }
+ private static String child(Element parent,String tag){
+  NodeList n=parent.getElementsByTagName(tag);
+  return n.getLength()>0?n.item(0).getTextContent():"";
+ }
+ private static Result rss(String query,String url,int count){
+  Result r=new Result(query);Set<String> used=new HashSet<>();
   try{
-   String term=query.toLowerCase(Locale.ROOT);
-   String keyword=term.matches(".*\\b(frango|galinha)\\b.*")?"chicken":
-      term.matches(".*\\b(arroz)\\b.*")?"rice":
-      term.matches(".*\\b(peixe|bacalhau|salm[aã]o)\\b.*")?"fish":
-      term.matches(".*\\b(carne|vaca|bife)\\b.*")?"beef":
-      term.matches(".*\\b(bolo|sobremesa|doce)\\b.*")?"cake":term.contains("receita")?"pasta":"";
-   if(keyword.isEmpty())return;
-   JSONObject data=new JSONObject(new String(fetch("https://www.themealdb.com/api/json/v1/1/search.php?s="+Uri.encode(keyword),230_000),StandardCharsets.UTF_8));
-   JSONArray items=data.optJSONArray("meals");if(items==null)return;
-   for(int i=0;i<items.length()&&i<3;i++){
-    JSONObject meal=items.getJSONObject(i);
-    String name=meal.optString("strMeal"),instructions=bound(meal.optString("strInstructions"),350);
-    String link=meal.optString("strSource");
-    if(!validUrl(link))link="https://www.themealdb.com/api/json/v1/1/lookup.php?i="+meal.optString("idMeal");
-    add(r,"Receita: "+name,link,instructions,seen);
+   Document doc=safeXml(fetch(url,340000));NodeList items=doc.getElementsByTagName("item");
+   for(int i=0;i<items.getLength()&&i<count;i++){
+    Element item=(Element)items.item(i);
+    put(r,child(item,"title"),child(item,"link"),child(item,"description"),child(item,"pubDate"),used);
    }
   }catch(Exception ignored){}
- }
- static boolean needsRecentSources(String question){
-  String q=NexusIntent.norm(question);
-  return q.matches(".*\\b(hoje|ontem|amanha|agora|atual|atuais|atualizado|ultimas|noticias|recentes|2026|precos|onde comprar|resultado de jogo)\\b.*");
- }
- static Result search(String query){
-  String cleaned=bound(query==null?"":query.trim(),250);Result r=new Result(cleaned);
-  if(cleaned.length()<2)return r;
-  Set<String> seen=new HashSet<>();
-  // General-purpose search results via a public RSS result representation.
-  rss(r,"https://www.bing.com/search?format=rss&q="+Uri.encode(cleaned),seen,6);
-  if(needsRecentSources(cleaned)){
-   rss(r,"https://news.google.com/rss/search?q="+Uri.encode(cleaned)+"&hl=pt-PT&gl=PT&ceid=PT:pt",seen,4);
-  }
-  if(r.sources.length()<3&&NexusIntent.norm(cleaned).matches(".*\\b(o que e|quem foi|historia|cientifico|ciencia|definicao|biografia|historia de)\\b.*"))
-   wiki(r,cleaned,seen);
-  if(NexusIntent.norm(cleaned).contains("receita")||NexusIntent.norm(cleaned).matches(".*\\b(frango|arroz|peixe|bolo)\\b.*"))
-   meals(r,cleaned,seen);
   return r;
+ }
+ private static Result wiki(String q){
+  Result r=new Result(q);Set<String> used=new HashSet<>();
+  try{
+   String url="https://pt.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=7&srsearch="+Uri.encode(q);
+   JSONObject data=new JSONObject(new String(fetch(url,170000),StandardCharsets.UTF_8));
+   JSONArray list=data.getJSONObject("query").getJSONArray("search");
+   for(int i=0;i<list.length();i++){
+    JSONObject it=list.getJSONObject(i);String title=it.optString("title");
+    put(r,title,"https://pt.wikipedia.org/wiki/"+Uri.encode(title.replace(' ','_')),it.optString("snippet"),null,used);
+   }
+  }catch(Exception ignored){}
+  return r;
+ }
+ private static Result meals(String q){
+  Result r=new Result(q);Set<String> used=new HashSet<>();
+  try{
+   String v=NexusIntent.norm(q);
+   String term=v.matches(".*\\b(frango|galinha)\\b.*")?"chicken":
+    v.matches(".*\\b(arroz)\\b.*")?"rice":
+    v.matches(".*\\b(bacalhau|peixe|salmao)\\b.*")?"fish":
+    v.matches(".*\\b(bolo|sobremesa)\\b.*")?"cake":"pasta";
+   JSONObject d=new JSONObject(new String(fetch("https://www.themealdb.com/api/json/v1/1/search.php?s="+Uri.encode(term),300000),StandardCharsets.UTF_8));
+   JSONArray rows=d.optJSONArray("meals");
+   if(rows!=null)for(int i=0;i<rows.length()&&i<4;i++){
+    JSONObject meal=rows.getJSONObject(i),x=meal;
+    String link=x.optString("strSource");
+    if(!safeLink(link))link="https://www.themealdb.com/meal/"+x.optString("idMeal");
+    put(r,"Receita: "+x.optString("strMeal"),link,x.optString("strInstructions"),null,used);
+   }
+  }catch(Exception ignored){}
+  return r;
+ }
+ static boolean shouldLookup(String utterance){
+  String q=NexusIntent.norm(utterance);
+  if(q.isEmpty()||q.matches("^(ola|bom dia|boa tarde|boa noite|obrigado|obrigada|como estas|tudo bem|bom trabalho|adeus|ate logo)[ ]*[?!]*$"))return false;
+  if(needsRecentSources(q))return true;
+  if(q.matches(".*\\b(pesquisa|procura|investiga|fontes|referencias|compara|comparacao|verifica|aprofundar|aprofundadamente|detalhadamente|estudo|analise profunda)\\b.*"))return true;
+  return q.matches("^(o que e|quem e|quem foi|porque|por que|como funciona|como fazer|como posso|quais sao|qual e|quanto custa|quantos|em que ano|onde fica|onde encontrar|que diferenca|qual a diferenca|explica me|fala me sobre|diz me tudo sobre)\\b.*");
+ }
+ static boolean needsRecentSources(String q){
+  return NexusIntent.norm(q).matches(".*\\b(hoje|ontem|amanha|agora|atual|atuais|atualizado|ultimas|noticias|noticiario|recentes|2026|precos|onde comprar|resultado de jogo|em direto|ao vivo)\\b.*");
+ }
+ private static String relevanceQuery(String question){
+  String q=NexusIntent.norm(question);
+  if(q.matches("(noticias|noticias de hoje|noticias hoje|noticiario|as noticias|ultimas noticias|noticias atuais|diz me as noticias|quais sao as noticias hoje|noticias do dia|noticias de portugal|noticias em portugal)"))
+   return "Portugal últimas notícias hoje";
+  return bound(question,220);
+ }
+ private static boolean isNews(String q){
+  return NexusIntent.norm(q).matches(".*\\b(noticias|noticia|noticiario|ultimas|jornal|atualidade|manchetes)\\b.*");
+ }
+ private static boolean isRecipe(String q){return NexusIntent.norm(q).matches(".*\\b(receita|receitas|cozinhar|bolo|frango|arroz|peixe|bacalhau|comida)\\b.*");}
+ static Result search(String request){
+  String q=bound(request==null?"":request.trim(),230);
+  Result empty=new Result(q);if(q.length()<2)return empty;
+  String key=NexusIntent.norm(q);
+  synchronized(CACHE){CacheEntry e=CACHE.get(key);if(e!=null&&System.currentTimeMillis()-e.moment<(needsRecentSources(q)?75000:240000))return e.value;}
+  String search=relevanceQuery(q);
+  boolean news=isNews(q),recipe=isRecipe(q);
+  ExecutorService pool=Executors.newFixedThreadPool(4);
+  ExecutorCompletionService<Result> completed=new ExecutorCompletionService<>(pool);
+  int total=0;
+  // Search in parallel: a failed provider cannot stall all the others.
+  completed.submit(()->rss(q,"https://www.bing.com/search?format=rss&q="+Uri.encode(search),8));total++;
+  if(news||needsRecentSources(q)){
+   completed.submit(()->rss(q,"https://news.google.com/rss/search?q="+Uri.encode(search)+"&hl=pt-PT&gl=PT&ceid=PT:pt",8));total++;
+   completed.submit(()->rss(q,"https://www.bing.com/news/search?format=rss&q="+Uri.encode(search),6));total++;
+  }else{
+   completed.submit(()->wiki(search));total++;
+  }
+  if(recipe){completed.submit(()->meals(search));total++;}
+  if(news&&total<4){
+   completed.submit(()->rss(q,"https://news.google.com/rss?hl=pt-PT&gl=PT&ceid=PT:pt",8));total++;
+  }
+  Result combined=new Result(q);Set<String> seen=new HashSet<>();
+  long end=System.currentTimeMillis()+5700;
+  try{
+   for(int n=0;n<total;n++){
+    long remaining=end-System.currentTimeMillis();
+    if(remaining<=0)break;
+    Future<Result> task=completed.poll(remaining,TimeUnit.MILLISECONDS);
+    if(task==null)break;
+    Result next=task.get(80,TimeUnit.MILLISECONDS);
+    for(int i=0;i<next.sources.length();i++){
+     JSONObject item=next.sources.optJSONObject(i);
+     if(item!=null)put(combined,item.optString("title"),item.optString("url"),item.optString("snippet"),item.optString("published"),seen);
+    }
+    if(combined.sources.length()>=9)break;
+   }
+  }catch(Exception ignored){}finally{pool.shutdownNow();}
+  synchronized(CACHE){if(combined.sources.length()>0)CACHE.put(key,new CacheEntry(combined));}
+  return combined;
  }
 }

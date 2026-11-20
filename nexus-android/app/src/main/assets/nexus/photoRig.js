@@ -16,7 +16,7 @@
   if(!img.naturalWidth||!img.naturalHeight)return;
   const ir=img.getBoundingClientRect(),hr=host.getBoundingClientRect();
   const sx=ir.width/img.naturalWidth,sy=ir.height/img.naturalHeight;
-  const x=.408*img.naturalWidth,y=.504*img.naturalHeight,w=.195*img.naturalWidth,h=.077*img.naturalHeight;
+  const x=.408*img.naturalWidth,y=.675*img.naturalHeight,w=.195*img.naturalWidth,h=.077*img.naturalHeight;
   const cw=Math.max(1,Math.round(w)),ch=Math.max(1,Math.round(h));
   if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
   canvas.style.left=(ir.left-hr.left+x*sx)+'px';canvas.style.top=(ir.top-hr.top+y*sy)+'px';

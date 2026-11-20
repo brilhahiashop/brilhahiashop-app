@@ -15,19 +15,30 @@
     <div id="avatarWrap" class="avatar-wrap state-idle" tabindex="0">
       <div class="rings"></div>
       <div class="scan"></div>
-      <img src="avatar.webp" alt="NEXUS holograma" class="avatar">
+      <img src="portrait-real.webp" alt="NEXUS holograma" class="avatar">
       <div class="eyes eye-l"></div><div class="eyes eye-r"></div>
       <div class="blink blink-l"></div><div class="blink blink-r"></div>
       <div class="mouth"></div>
     </div>
+    <nav class="orbit" id="nexusOrbit" aria-label="Controlo holográfico de funções">
+      <button id="orbitPrev" class="orbit-arrow" aria-label="Função anterior">‹</button>
+      <div class="orbit-deck" id="orbitDeck" aria-live="polite">
+        <button class="orbit-card" type="button" data-slot="-2" aria-label="Opção anterior"></button>
+        <button class="orbit-card" type="button" data-slot="-1" aria-label="Opção à esquerda"></button>
+        <button class="orbit-card" type="button" data-slot="0" aria-label="Executar opção selecionada"></button>
+        <button class="orbit-card" type="button" data-slot="1" aria-label="Opção à direita"></button>
+        <button class="orbit-card" type="button" data-slot="2" aria-label="Próxima opção"></button>
+      </div>
+      <button id="orbitNext" class="orbit-arrow" aria-label="Próxima função">›</button>
+    </nav>
     <div id="stateText" class="state">TOCA NO NEXUS PARA FALAR</div>
-    <div class="signal"><span class="dot"></span><span id="avatarInfo">AVATAR LOCAL · VOZ ANDROID</span><span class="bars">▮▮▮▮▮▮</span></div>
+    <div class="signal"><span class="dot"></span><span id="avatarInfo">NEXUS ONLINE</span><span class="bars">▮▮▮▮▮▮</span></div>
   </section>
   <section id="panel" class="panel hidden">
-    <div class="panel-head"><div><div id="panelTopic" class="panel-topic">NEXUS</div><div class="panel-sub">FONTES APENAS QUANDO DEVOLVIDAS PELO SERVIDOR</div></div><button id="closePanel" class="close">✕</button></div>
-    <div id="panelContent" class="panel-content"></div>
+    <div class="panel-head"><div><div id="panelTopic" class="panel-topic">NEXUS</div><div class="panel-sub" id="panelStatus">Resposta do NEXUS</div></div><button id="closePanel" class="close">✕</button></div>
+    <button id="panelExpand" type="button" class="panel-expand" aria-expanded="false">Ver resposta completa</button><div id="panelContent" class="panel-content"></div>
     <nav class="carousel-nav"><button id="previous" aria-label="Painel anterior">‹</button><span id="panelCount"></span><button id="next" aria-label="Painel seguinte">›</button></nav>
-    <div id="panelSources" class="panel-sources"></div>
+    <div id="panelSources" class="panel-sources"></div><a id="searchFallback" class="search-fallback hidden" href="https://www.google.com/" rel="noopener noreferrer">Abrir pesquisa no navegador</a>
   </section>
 </main>
 <footer class="footer">
@@ -41,4 +52,4 @@
   <div id="notice" class="notice"></div>
 </footer>
 </div>
-<script src="three.min.js"></script><script src="avatar3d.js"></script><script src="photoRig.js"></script><script src="app.js"></script></body></html>
+<script src="three.min.js"></script><script src="avatar3d.js"></script><script src="photoRig.js"></script><script src="app.js"></script><script src="orbit.js"></script></body></html>

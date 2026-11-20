@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), avatarWrap=$('#avatarWrap'),stateText=$('#stateText'),panel=$('#panel'),notice=$('#notice');
-let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false,lastNativeCommand='';
+let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false,lastNativeCommand='',researchPreview=-1;
 const native=window.NexusNative, labels={idle:'TOCA PARA FALAR',thinking:'A PENSAR',speaking:'A RESPONDER',listening:'ESTOU A OUVIR'};
 function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(value);state=value;avatarWrap.classList.remove('state-idle','state-thinking','state-speaking','state-listening');avatarWrap.classList.add('state-'+value);stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
 window.nexusVoiceState=setState;
@@ -15,8 +15,14 @@ window.nexusLocalAnswer=(title,reply)=>{
   addCard(title,reply);setState('idle');notice.textContent='';
 };
 function textBlocks(text){const container=document.createDocumentFragment();String(text).split(/\n{2,}/).forEach(block=>{const p=document.createElement('p');p.textContent=block;container.appendChild(p);});return container;}
-function renderCard(direction=1){if(position<0)return;const card=cards[position];panel.classList.remove('hidden');panel.getAnimations().forEach(a=>a.cancel());panel.animate([{opacity:.1,transform:'perspective(900px) rotateY('+direction*65+'deg) translateX('+direction*70+'px)'},{opacity:1,transform:'perspective(900px) rotateY(0) translateX(0)'}],{duration:420,easing:'ease-out'});$('#panelTopic').textContent=card.title;$('#panelContent').replaceChildren(textBlocks(card.reply));$('#panelSources').replaceChildren();(card.sources||[]).slice(0,6).forEach(source=>{if(!source||typeof source!=='object')return;try{const u=new URL(source.url);if(u.protocol!=='https:')return;const a=document.createElement('a');a.href=u.href;a.textContent=source.title||u.hostname;a.rel='noopener noreferrer';$('#panelSources').appendChild(a);}catch{}});$('#panelCount').textContent=(position+1)+' / '+cards.length;}
-function addCard(title,reply,sources=[]){cards.push({title,reply,sources});if(cards.length>30)cards.shift();position=cards.length-1;renderCard();}
+function renderCard(direction=1){if(position<0)return;const card=cards[position];panel.classList.remove('hidden');panel.getAnimations().forEach(a=>a.cancel());panel.animate([{opacity:.1,transform:'perspective(900px) rotateY('+direction*65+'deg) translateX('+direction*70+'px)'},{opacity:1,transform:'perspective(900px) rotateY(0) translateX(0)'}],{duration:420,easing:'ease-out'});$('#panelTopic').textContent=card.title;$('#panelStatus').textContent=(card.sources&&card.sources.length)?'Fontes consultadas · '+card.sources.length:'Resposta do NEXUS';
+const fallback=$('#searchFallback');
+if(fallback){
+ const missing=!(card.sources&&card.sources.length)&&/fontes p[uú]blicas|fontes atuais|fontes indispon[ií]veis/i.test(card.reply);
+ fallback.classList.toggle('hidden',!missing);
+ if(missing){fallback.href='https://www.google.com/search?q='+encodeURIComponent(card.query||'notícias Portugal hoje');fallback.textContent='Abrir pesquisa no Google';}
+}$('#panelContent').replaceChildren(textBlocks(card.reply));$('#panelSources').replaceChildren();(card.sources||[]).slice(0,6).forEach(source=>{if(!source||typeof source!=='object')return;try{const u=new URL(source.url);if(u.protocol!=='https:')return;const a=document.createElement('a');a.href=u.href;a.textContent=source.title||u.hostname;a.rel='noopener noreferrer';$('#panelSources').appendChild(a);}catch{}});$('#panelCount').textContent=(position+1)+' / '+cards.length;}
+function addCard(title,reply,sources=[]){cards.push({title,reply,sources,query:pending});if(cards.length>30)cards.shift();position=cards.length-1;renderCard();}
 function rotate(direction){if(!cards.length)return;position=(position+direction+cards.length)%cards.length;renderCard(direction);}
 function classify(q){const topics=[['Meteorologia',/tempo|chuva|meteorolog|temperatura/i],['Notícias',/not[ií]cia|atualidade/i],['Negócios',/neg[oó]cio|brilhah|loja|venda/i],['Redes sociais',/instagram|facebook|redes|tiktok/i],['Ciência',/ci[eê]ncia|espa[cç]o|universo/i],['Tecnologia',/tecnolog|programa|computador/i],['Música',/m[uú]sica|beat|guitarra/i],['Fotografia',/fotograf|c[aâ]mara|evento/i]];return (topics.find(t=>t[1].test(q))||['Conversa'])[0];}
 function isLocalInstruction(q){
@@ -26,6 +32,14 @@ function isLocalInstruction(q){
 function ask(question,forceAI=false){
  const q=String(question||'').trim().slice(0,4000);
  if(!q||pendingRequest)return;
+ if(window.nexusOrbitalFocus){
+   const simplified=q.toLocaleLowerCase('pt-PT').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+   if(/\b(pesquisa|noticias|procurar|informacao|investiga|preco|internet|google)\b/.test(simplified))nexusOrbitalFocus('research');
+   else if(/\b(alarme|despertador|agenda|lembrete|compromisso|calendario)\b/.test(simplified))nexusOrbitalFocus('agenda');
+   else if(/\b(aprende|ensina|rotina|aprendizagem)\b/.test(simplified))nexusOrbitalFocus('learning');
+   else if(/\b(abre|abrir|instagram|whatsapp|facebook|youtube|aplicacao)\b/.test(simplified))nexusOrbitalFocus('apps');
+ }
+
  if(!native){nexusFailure('Abre a aplicação Android para utilizar a voz e a ligação segura.');return;}
  if(!forceAI&&native.command){lastNativeCommand=q;notice.textContent='NEXUS a interpretar: '+q;native.command(q);return;}
  native.stop();pendingRequest=true;pending=q;setState('thinking');notice.textContent='A consultar a IA…';
@@ -41,9 +55,25 @@ function weatherReply(weather){
  (d.time||[]).slice(0,4).forEach((day,i)=>{text+='\n\n'+String(day)+': mínima '+number((d.temperature_2m_min||[])[i])+' °C · máxima '+number((d.temperature_2m_max||[])[i])+' °C · probabilidade de precipitação '+number((d.precipitation_probability_max||[])[i])+'%.';});
  return text+'\n\nFonte: Open-Meteo, indicada pelo servidor. A previsão pode mudar.';
 }
-window.nexusAnswer=data=>{pendingRequest=false;const weather=weatherReply(data.weather);const reply=weather||data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=weather?'Meteorologia · '+String(data.weather.city||'Previsão'):typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);addCard(title,reply,data.sources||[]);memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-16);notice.textContent='';$('.health').textContent='● SERVIDOR RESPONDEU';setState('idle');native.speak(reply);};
+window.nexusResearchPreview=sources=>{
+ if(!Array.isArray(sources)||!sources.length||!pendingRequest)return;
+ const safe=sources.filter(x=>x&&typeof x.url==='string'&&x.url.startsWith('https://')).slice(0,9);
+ if(!safe.length)return;
+ const preview='Encontrei '+safe.length+' fontes. A preparar uma resposta com referências…';
+ if(researchPreview>=0&&researchPreview<cards.length){
+  cards[researchPreview]={title:'Pesquisa online',reply:preview,sources:safe};position=researchPreview;renderCard();
+ }else{
+  addCard('Pesquisa online',preview,safe);researchPreview=cards.length-1;
+ }
+ notice.textContent='Fontes encontradas · a sintetizar';
+};
+window.nexusAnswer=data=>{pendingRequest=false;const weather=weatherReply(data.weather);const reply=weather||data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=weather?'Meteorologia · '+String(data.weather.city||'Previsão'):typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);if(researchPreview>=0&&researchPreview<cards.length){
+ cards[researchPreview]={title,reply,sources:data.sources||[],query:pending};
+ position=researchPreview;renderCard();researchPreview=-1;
+ }else addCard(title,reply,data.sources||[]);
+ memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-16);notice.textContent='';$('.health').textContent='● NEXUS PRONTA';setState('idle');native.speak(reply);};
 window.nexusFailure=error=>{pendingRequest=false;setState('idle');notice.textContent=error;$('.health').textContent='● VERIFICAR LIGAÇÃO';};
-window.nexusClearHistory=()=>{memory=[];lastNativeCommand='';cards=[];position=-1;panel.classList.add('hidden');notice.textContent='Contexto desta sessão apagado.';};
+window.nexusClearHistory=()=>{memory=[];lastNativeCommand='';researchPreview=-1;cards=[];position=-1;panel.classList.add('hidden');notice.textContent='Contexto desta sessão apagado.';};
 window.nexusStopAll=()=>{if(native)native.stop();pendingRequest=false;pending='';setState('idle');notice.textContent='';};
 function talk(){if(!native){nexusFailure('Voz disponível na aplicação Android.');return;}if(speaking){native.stop();setState('idle');return;}native.listen();}
 $('#learnBtn').onclick=()=>{if(native&&native.command)native.command('NEXUS, vou ensinar-te uma rotina');else notice.textContent='Modo aprendizagem disponível no Android.';};

@@ -97,3 +97,99 @@ body{background:
 @keyframes photoDepth{0%,100%{transform:perspective(1000px) rotateY(-1.6deg) translateY(0)}50%{transform:perspective(1000px) rotateY(1.6deg) translateY(-6px)}}
 .mode-controls{flex-wrap:wrap}.mode-controls button{min-height:30px}
 #operatorBtn{border-color:rgba(121,253,198,.5);color:#a1ffe2}
+
+
+/* NEXUS 1.0: functional, touchable spatial control ring.
+ * Inspired by the user's futuristic reference; the reference is illustrative,
+ * while these are real buttons with actions. */
+:root{--vivid:#66eeff;--deep:#040e1b;--glass:rgba(7,24,45,.77)}
+html,body{background:#030a15}
+.app{background:
+ radial-gradient(ellipse 62% 34% at 50% 32%,rgba(27,116,171,.35),transparent 77%),
+ radial-gradient(ellipse 95% 55% at 50% 75%,rgba(9,52,112,.38),transparent 70%),
+ #030b16}
+.topbar{padding:8px 12px 15px;min-height:64px;background:rgba(3,11,20,.83)}
+.brand-main{font-weight:350;letter-spacing:.36em;text-shadow:0 0 28px rgba(110,236,255,.55)}
+.brand-sub{font-size:7px;letter-spacing:.20em}
+.health{font-size:8px;padding:3px 8px;bottom:1px;background:rgba(1,21,31,.82);border:1px solid rgba(118,241,201,.28)}
+.stage{background:
+ radial-gradient(circle at 50% 38%,rgba(40,143,196,.18),transparent 59%),
+ linear-gradient(180deg,rgba(4,14,26,.25) 0%,rgba(2,8,19,.9) 100%);overflow:hidden}
+.hero{height:100%;min-height:0;justify-content:flex-start;padding-top:8px}
+.hero:after,.hero:before{opacity:.65}
+.avatar-wrap{height:min(50vh,500px);width:min(87vw,500px);max-height:67%;margin-top:4%;overflow:visible;transition:filter .4s ease}
+.avatar-wrap .avatar{max-height:100%;max-width:100%;filter:drop-shadow(0 0 12px rgba(50,211,255,.42)) drop-shadow(0 0 35px rgba(50,211,255,.21))}
+.holo-panel{top:20%;height:103px;width:20%;max-width:92px;padding:8px 5px}
+.holo-panel-left{left:1%;transform:perspective(400px) rotateY(29deg)}
+.holo-panel-right{right:1%;transform:perspective(400px) rotateY(-29deg)}
+.holo-action span{font-size:21px}
+.holo-ruler{top:17%;opacity:.7}
+.orbit{position:absolute;z-index:5;left:2.5%;right:2.5%;bottom:74px;height:94px;display:flex;
+ justify-content:center;align-items:center;gap:3px;pointer-events:auto}
+.orbit:after{content:"";position:absolute;z-index:-1;bottom:-13px;left:10%;width:80%;height:37px;
+ border-radius:50%;border:1px solid rgba(104,230,255,.35);
+ transform:perspective(380px) rotateX(62deg);
+ box-shadow:0 0 25px rgba(60,224,255,.24),inset 0 0 18px rgba(60,224,255,.16)}
+.orbit-deck{width:min(82vw,420px);display:flex;justify-content:center;align-items:center;
+ gap:clamp(2px,1.4vw,10px);perspective:850px}
+.orbit-arrow{flex:0 0 18px;z-index:6;background:none;border:0;
+ color:#7af3ff;text-shadow:0 0 13px rgba(72,217,255,.9);font-size:31px;padding:0}
+.orbit-card{flex:1;max-width:76px;min-width:0;height:69px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;
+ padding:10px 2px 7px;border:1px solid rgba(109,230,255,.39);border-radius:10px;
+ background:linear-gradient(145deg,rgba(20,89,129,.44),rgba(4,21,46,.74));
+ box-shadow:0 0 16px rgba(51,212,255,.12),inset 0 0 16px rgba(75,217,255,.1);
+ color:#80e6fa;backdrop-filter:blur(8px);transform-style:preserve-3d;
+ transform:perspective(550px) rotateY(calc(var(--offset)*-14deg)) translateY(calc(abs(var(--offset))*2px));
+ -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+ cursor:pointer;transition:background .22s,border-color .22s,filter .22s}
+.orbit-card.selected{height:81px;max-width:86px;
+ border-color:rgba(130,251,255,.95);color:#a2faff;
+ background:linear-gradient(150deg,rgba(24,121,173,.77),rgba(8,47,88,.86));
+ box-shadow:0 0 25px rgba(72,226,255,.36),inset 0 0 23px rgba(68,239,255,.22)}
+.orbit-card:focus-visible,.orbit-arrow:focus-visible{outline:2px solid #a2fcff;outline-offset:2px}
+.orbit-icon{line-height:1;font-size:25px;text-shadow:0 0 13px rgba(102,229,255,.88)}
+.orbit-card.selected .orbit-icon{font-size:33px}
+.orbit-name{font-size:8px;letter-spacing:.03em;font-weight:650;text-align:center}
+.orbit-card[data-slot="-2"],.orbit-card[data-slot="2"]{opacity:.73;filter:brightness(.73)}
+.orbit-motion{animation:orbitRefresh .23s ease-out}
+.orbit-deck.gesture-selected .orbit-card.selected{border-color:#7affcf;box-shadow:0 0 30px rgba(102,255,194,.65)}
+@keyframes orbitRefresh{from{opacity:.7;scale:.96}to{opacity:1;scale:1}}
+.state{position:absolute;z-index:5;bottom:40px;left:0;right:0;
+ font-size:11px;letter-spacing:.13em;text-shadow:0 0 11px rgba(78,225,255,.6)}
+.signal{position:absolute;bottom:12px;left:0;right:0;justify-content:center;font-size:7px;opacity:.85}
+.footer{padding:4px 10px 7px;background:linear-gradient(180deg,rgba(3,12,23,.92),rgba(1,7,15,.99));border-top:1px solid rgba(84,206,255,.12)}
+.nexus-quick-actions{margin:1px auto 3px}
+.nexus-quick-actions .learn-cta{height:35px;min-height:35px;font-size:9px}
+.nexus-quick-actions .learn-cta span{font-size:7px}
+.mode-controls{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap}
+.mode-controls button{font-size:10px!important;padding:6px 4px!important;white-space:nowrap}
+.footer-top{display:none}
+.dock{gap:17px;padding-top:3px}
+.dock-btn.small{width:44px;height:44px}
+.dock-btn.center{width:62px;height:62px}
+.notice{margin:2px auto 0;min-height:17px;max-height:30px;overflow:hidden}
+.panel{bottom:4px;left:3%;width:94%;max-height:50%;overflow:hidden;
+ padding:14px 15px 10px;border-radius:18px;
+ background:linear-gradient(135deg,rgba(5,31,55,.95),rgba(2,15,33,.94));
+ clip-path:none;box-shadow:0 0 27px rgba(68,220,255,.18),0 18px 38px rgba(0,3,11,.85)}
+.panel.expanded{max-height:91%;overflow-y:auto}
+.panel-head{gap:8px;margin-bottom:3px}
+.panel-topic{font-size:16px;letter-spacing:.08em;line-height:1.2;max-width:97%;overflow-wrap:anywhere}
+.panel-sub{font-size:9px;letter-spacing:.08em;color:#9fd7e6}
+.panel .close{flex:0 0 34px;width:34px;height:34px;font-size:19px}
+.panel-expand{display:block;align-self:flex-start;border:0;background:none;
+ padding:3px 2px 8px;color:#78e4f7;font-size:11px;text-decoration:underline}
+.panel-content{max-height:105px;overflow-y:auto;font-size:14px;line-height:1.45}
+.panel.expanded .panel-content{max-height:none;overflow:visible;font-size:15px}
+.panel-content p{margin:0 0 9px}
+.panel-sources{max-height:62px;overflow:auto;margin-top:4px;padding-top:5px;font-size:9px;text-transform:none;letter-spacing:0}
+.panel.expanded .panel-sources{max-height:none}
+.panel-sources a{margin:2px 4px 2px 0;padding:3px 5px;border:1px solid rgba(87,208,255,.25);border-radius:7px;background:rgba(24,97,135,.19);color:#a4edff}
+.carousel-nav{padding-top:2px}
+.carousel-nav button{height:27px;width:27px;font-size:18px}
+@media(max-height:770px){.avatar-wrap{max-height:56%}.orbit{bottom:55px}.state{bottom:31px}.signal{bottom:6px}}
+@media(max-width:360px){.orbit{left:1%;right:1%}.orbit-deck{width:84vw;gap:2px}.orbit-icon{font-size:21px}
+ .orbit-card{height:60px}.orbit-card.selected{height:71px}.orbit-name{font-size:7px}.orbit-arrow{flex-basis:14px}}
+@media(prefers-reduced-motion:reduce){.orbit-motion{animation:none}}
+
+.search-fallback{display:block;color:#b1f7ff;border:1px solid rgba(80,220,250,.5);border-radius:9px;padding:8px 12px;text-decoration:none;background:rgba(9,71,112,.3);font-size:12px;text-align:center;margin-top:8px}.search-fallback.hidden{display:none!important}
