@@ -20,7 +20,7 @@
  oval(head,skin,-.58,-.03,0,.085,.17,.10);oval(head,skin,.58,-.03,0,.085,.17,.10);
  const eyes=[];for(const x of [-.215,.215]){const e=new T.Group();e.position.set(x,.12,.486);head.add(e);oval(e,dark,0,0,0,.16,.089,.045);oval(e,eyeWhite,0,0,.025,.135,.062,.035);const pupil=oval(e,glow,0,0,.057,.047,.049,.015);oval(e,dark,0,0,.07,.018,.027,.008);eyes.push({group:e,pupil});const brow=oval(head,dark,x,.245,.47,.17,.023,.026);brow.rotation.z=x<0?.1:-.1;}
  oval(head,skin,0,-.06,.52,.068,.15,.10);oval(head,skin,0,-.15,.54,.09,.05,.065);
- const mouth=new T.Group();mouth.position.set(0,-.32,.47);head.add(mouth);const opening=oval(mouth,dark,0,0,0,.155,.014,.022);oval(mouth,skin,0,.018,.015,.17,.026,.025);const lower=oval(mouth,skin,0,-.021,.015,.16,.024,.025);
+ // No synthetic lip geometry; voice response is rendered as holographic energy around the complete avatar.
  // Cyan seams are actual 3D curves on the model.
  for(const side of [-1,1]){const curve=new T.CatmullRomCurve3([new T.Vector3(side*.46,.48,.30),new T.Vector3(side*.53,.05,.29),new T.Vector3(side*.42,-.40,.33),new T.Vector3(side*.18,-.65,.30)]);head.add(new T.Mesh(new T.TubeGeometry(curve,30,.008,6,false),glow));}
  const ring=new T.Mesh(new T.TorusGeometry(.86,.012,8,64),glow);ring.rotation.x=Math.PI/2;ring.position.y=-1.18;bust.add(ring);
@@ -29,11 +29,11 @@
  function frame(ms){raf=0;if(!enabled||document.hidden)return;raf=requestAnimationFrame(frame);if(ms-last<32)return;last=ms;const t=ms/1000;
   bust.position.y=Math.sin(t*1.3)*.018;head.rotation.y=Math.sin(t*.48)*.095;head.rotation.z=Math.sin(t*.7)*.026+(voice==='listening'?-.055:0);head.rotation.x=voice==='thinking'?.045:Math.sin(t*.6)*.015;
   const blink=Math.pow(Math.max(0,Math.sin(t*1.09)),60);eyes.forEach(e=>{e.group.scale.y=Math.max(.07,1-blink);e.pupil.position.x=Math.sin(t*.45)*.016;});
-  const talking=voice==='speaking';const timed=performance.now()<wordUntil;const amount=talking?(timed?.045+.025*Math.sin(t*21):.018+.012*Math.sin(t*13)):0;opening.scale.y=.014+Math.max(0,amount);lower.position.y=-.021-Math.max(0,amount);ring.rotation.z=t*.14;renderer.render(scene,camera);
+  ring.rotation.z=t*.14;ring.scale.setScalar(voice==='speaking'?(1+.05*Math.sin(t*12)):1);rim.intensity=voice==='speaking'?13+3*Math.sin(t*9):10;renderer.render(scene,camera);
  }
  const start=()=>{if(!raf&&enabled&&!document.hidden)raf=requestAnimationFrame(frame);};
  window.nexusAvatarState=s=>{voice=s;};window.nexusSpeechRange=word=>{wordUntil=performance.now()+Math.min(800,Math.max(140,String(word).length*70));};
- window.nexusAvatarMode=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D ESTILIZADO':'ATIVAR 3D';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · BOCA ANIMADA':'ROSTO REALISTA · FALA ANIMADA';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
+ window.nexusAvatarMode=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D ESTILIZADO':'ATIVAR 3D';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · LUZ REATIVA':'HOLOGRAMA · ENERGIA REATIVA';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
  renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();available=false;enabled=false;cancelAnimationFrame(raf);fallback('WebGL indisponível · ilustração local');});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;voice='idle';}else start();});host.classList.remove('model-ready');document.querySelector('#avatarMode').textContent='ATIVAR 3D';document.querySelector('#avatarInfo').textContent='ROSTO REALISTA · FALA ANIMADA';
  }catch(e){if(renderer)renderer.dispose();fallback('Sem suporte 3D · ilustração local');window.nexusAvatarMode=()=>{};}
