@@ -31,6 +31,7 @@ public final class VoiceCommandActivity extends Activity {
    @Override public void onText(String raw){if(done)return;done=true;
     if(!ReminderManager.maybeHandle(VoiceCommandActivity.this,raw,msg->{
      Toast.makeText(VoiceCommandActivity.this,msg,Toast.LENGTH_LONG).show();
+     finish();
     })){
      String result=CommandRouter.dispatch(VoiceCommandActivity.this,raw);
      Toast.makeText(VoiceCommandActivity.this,result,Toast.LENGTH_SHORT).show();

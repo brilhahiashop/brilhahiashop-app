@@ -19,9 +19,7 @@ public final class SpeechCapture implements RecognitionListener {
   if(!SpeechRecognizer.isRecognitionAvailable(a)){cb.onError("O serviço de voz não está disponível neste telemóvel.");return null;}
   try {
    SpeechRecognizer r;
-   if(android.os.Build.VERSION.SDK_INT>=31&&SpeechRecognizer.isOnDeviceRecognitionAvailable(a))
-    r=SpeechRecognizer.createOnDeviceSpeechRecognizer(a);
-   else r=SpeechRecognizer.createSpeechRecognizer(a);
+   r=SpeechRecognizer.createSpeechRecognizer(a);
    SpeechCapture c=new SpeechCapture(r,cb);
    r.setRecognitionListener(c);
    Intent intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
