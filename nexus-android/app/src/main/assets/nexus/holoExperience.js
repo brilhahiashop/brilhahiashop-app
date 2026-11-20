@@ -115,10 +115,9 @@
  window.nexusAnswer=data=>{
   if(origAnswer)origAnswer(data);
   if(!data)return;
-  const reply=typeof data.reply==='string'?data.reply:typeof data.answer==='string'?data.answer:'';
-  const weather=data.weather;
-  const actual=weather&&weather.current&&typeof weather.current.temperature_2m==='number'?
-    'Temperatura em '+String(weather.city||'local')+': '+weather.current.temperature_2m+' ºC. '+escapeText(reply):reply;
+  // The native answer handler may normalize provider output (e.g. actual Open-Meteo
+  // forecast instead of a raw model claim). Show exactly what it rendered.
+  const actual=content.textContent||data.reply||data.answer||'';
   showResult(actual,data.sources,'RESPOSTA DO NEXUS');
   userMessage.classList.remove('visible');
   if(window.nexusOrbitalFocus && Array.isArray(data.sources)&&data.sources.length)window.nexusOrbitalFocus('research');
