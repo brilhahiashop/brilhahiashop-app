@@ -82,7 +82,7 @@ await page.locator('#closePanel').click(); // Results overlay correctly takes pr
 await page.evaluate(()=>document.querySelector('#hudApps').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'apps');
 await page.evaluate(()=>document.querySelector('#hudAgenda').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'reminders');
 await page.evaluate(()=>document.querySelector('#operatorBtn').click());assert.equal(await page.evaluate(()=>calls.at(-1)),'operator');
-await page.evaluate(()=>{nexusAvatarState('speaking');nexusSpeechRange('Olá André')});
+await page.evaluate(()=>nexusVoiceState('speaking')); // no 3D resources before explicit opt-in
 await page.waitForTimeout(140);
 assert.equal(await page.locator('#nexusVoiceEnergy').count(),1);
 await page.evaluate(()=>nexusVoiceState('speaking'));
@@ -91,7 +91,7 @@ await page.evaluate(()=>nexusSpeechLengthChanged(30));
 await page.evaluate(()=>nexusSpeechProgress(0,20));
 assert.equal(await page.locator('#holoTranscript').count(),1);
 await page.evaluate(()=>nexusVoiceState('idle'));
-await page.evaluate(()=>nexusAvatarState('idle'));
+await page.evaluate(()=>nexusVoiceState('idle'));
 await page.evaluate(()=>document.querySelector('#avatarMode').click());assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),true);
 await page.evaluate(()=>document.querySelector('#avatarMode').click());assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
 await page.evaluate(()=>document.querySelector('#avatarMode').click());await page.evaluate(()=>{nexusAvatarState('speaking');nexusSpeechRange('Olá');nexusGesture('select');nexusGesture('confirm');nexusConversationState(true)});
