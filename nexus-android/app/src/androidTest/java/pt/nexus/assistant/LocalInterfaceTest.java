@@ -14,6 +14,28 @@ import java.util.concurrent.*;
 public class LocalInterfaceTest {
  private WebView find(View v){if(v instanceof WebView)return (WebView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){WebView w=find(g.getChildAt(i));if(w!=null)return w;}}return null;}
  private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(5,TimeUnit.SECONDS);}
+ @Test public void recognizedAppsAndLearningMemory() throws Exception {
+  assertEquals("facebook",CommandRouter.appName("o Facebook"));
+  assertEquals("facebook",CommandRouter.appName("Face"));
+  assertEquals("instagram",CommandRouter.appName("Insta"));
+  assertEquals("whatsapp",CommandRouter.appName("WhatsApp"));
+  assertEquals("maps",CommandRouter.appName("Google Maps"));
+  assertTrue(CommandRouter.knownPackages("instagram").length>0);
+  Instrumentation i=InstrumentationRegistry.getInstrumentation();
+  MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  try{
+   i.runOnMainSync(()->{
+    a.getSharedPreferences("nexus_learning_v1",0).edit().clear().commit();
+    java.util.function.Consumer<String> ignore=s->{};
+    assertTrue(LearningManager.handle(a,"NEXUS, vou ensinar-te uma rotina chamada teste",ignore));
+    assertTrue(LearningManager.handle(a,"Primeiro abre o Facebook",ignore));
+    assertTrue(LearningManager.handle(a,"Depois pesquisa fotografia",ignore));
+    assertTrue(LearningManager.handle(a,"guarda a rotina",ignore));
+    assertTrue(LearningManager.summary(a).contains("2 passos"));
+    a.getSharedPreferences("nexus_learning_v1",0).edit().clear().commit();
+   });
+  }finally{i.runOnMainSync(a::finishAndRemoveTask);}
+ }
  @Test public void interfaceWorksOfflineAndSurvivesReload() throws Exception {
   Instrumentation i=InstrumentationRegistry.getInstrumentation();
   i.getUiAutomation().executeShellCommand("svc wifi disable").close();i.getUiAutomation().executeShellCommand("svc data disable").close();

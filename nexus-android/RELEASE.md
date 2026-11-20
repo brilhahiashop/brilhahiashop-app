@@ -1,15 +1,26 @@
-# NEXUS Android 0.5.1 — Correção de regressão
+# NEXUS Android 0.6.0 — três melhorias numa aplicação
 
-Corrige o bloqueio identificado na versão 0.5.0: quando o reconhecimento passava para o estado "A pensar", a interface recusava submeter o próprio pedido.
+**Corrigir abertura de aplicações**
+- Usa API Android 13+ de IntentSender para tentar abrir aplicações mesmo quando a listagem de apps estiver filtrada.
+- Mantém tentativas pelo PackageManager, pacote conhecido e launcher visível.
+- Reconhece nomes comuns como Facebook/Face, Insta/Instagram, WhatsApp, Gmail, YouTube, Maps, TikTok, Spotify, Messenger e Chrome.
+- Disponibiliza MENU → Aplicações detetadas para diagnosticar problemas de perfil duplo ou permissão.
 
-- Conversa por voz novamente enviada à IA após reconhecimento, com controlo de pedidos em curso separado do estado visual.
-- Comandos locais, incluindo "abre Instagram" e "abre Facebook", funcionam também quando escritos pelo teclado.
-- Reconhecimento de apps com aliases para as principais aplicações.
-- "NEXUS, apresenta-te" respondido localmente, sem depender do AI Gateway.
-- Saudação mostrada na interface ao iniciar e falada quando a voz Android estiver disponível.
-- Voz portuguesa com tentativa alternativa e opção "Testar voz e saudação" no menu.
-- Indicadores "Ouvi: ..." e mensagens de diagnóstico em erros do reconhecimento.
-- Testes automáticos para a regressão de voz e comandos do teclado.
-- Mantém lembretes, avatar holográfico, janelas e painel flutuante.
+**Holograma e interface**
+- Nova camada de painéis laterais, anéis energéticos, brilho, plataforma e transições holográficas com CSS local.
+- Mantém a imagem existente; não é um avatar facial 3D ou um verdadeiro holograma de realidade aumentada.
 
-A versão continua a necessitar de testes no equipamento físico para volume, permissões, serviços de voz e comportamento de apps de terceiros.
+**Memória de procedimentos**
+- «NEXUS, vou ensinar-te uma rotina chamada manhã» inicia o ensino.
+- «Primeiro abre o Facebook», «depois pesquisa ...» grava passos sem executá-los.
+- «Guarda a rotina» guarda localmente no dispositivo.
+- «Executa a rotina manhã» apresenta uma revisão para confirmação. Executa um passo por vez e exige comando «próximo passo» para prosseguir.
+- Apenas abertura de aplicações e pesquisas podem ser executadas diretamente; os restantes passos são orientações manuais. Não observa o ecrã nem controla automaticamente botões de terceiros.
+- «Mostra rotinas» e «Apaga rotina manhã» permitem consultar e eliminar as instruções.
+
+**Preservado**
+- Servidor de IA, conversação por voz integrada, calendário e lembretes, saída segura, painel flutuante.
+- As rotinas são privadas e guardadas localmente. Desinstalar a aplicação pode eliminar rotinas e lembretes locais.
+
+**Qualificação**
+- APK de pré-lançamento para teste. Requer validação no Android real para abertura de apps, serviços de voz e funcionalidades dependentes do fabricante.
