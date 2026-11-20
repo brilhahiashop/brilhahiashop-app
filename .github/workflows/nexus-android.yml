@@ -44,9 +44,9 @@ jobs:
       - name: Offline Android interface test
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           arch: x86_64
-          target: google_apis
+          target: default
           disable-animations: true
           ram-size: 2048M
           cores: 2
