@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
  }
  private void onSpokenCommand(String spoken){
   if(!foreground||closed)return;
-  String normalized=CommandText.clean(spoken).replaceFirst("^(nexus|nexos)\\s+","");
+  String normalized=CommandText.clean(spoken).replaceFirst("^(nexus|nexos|anexos)\\s+","");
   if(normalized.matches("^(para de ouvir|para a conversa|desliga o microfone|para a escuta)$")){continuous=false;voiceHandler.removeCallbacks(continueListening);if(capture!=null)capture.close();stopService(new Intent(this,HandsFreeService.class));js("nexusConversationState(false)");js("nexusHandsFreeState(false)");js("nexusVoiceState('idle')");return;}
   if(normalized.matches("^(sair do nexus|fecha o nexus|fechar nexus|desliga o nexus)$")){exit();return;}
   if(normalized.matches("^(continua|proxima tarefa|proximo comando|seguinte comando|faz o seguinte)$")&&!actionPlan.isEmpty()){
@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
    js("nexusLocalAnswer("+JSONObject.quote("NEXUS · CONTROLO ANDROID")+","+JSONObject.quote(result)+")");
    speak(result);return;
   }
-  String q=CommandRouter.plain(spoken).replaceFirst("^(ola\\s+)?(nexus|nexos)[,!: ]*","");
+  String q=CommandRouter.plain(spoken).replaceFirst("^(ola\\s+)?(nexus|nexos|anexos)[,!: ]*","");
   if(q.matches("^(apresenta.te|apresenta te|quem es|quem es tu|fala.me de ti|diz.me quem es|apresenta o nexus)[?!. ]*$")){
    String reply="Olá André! Sou o NEXUS, a tua assistente pessoal. Posso conversar sobre vários assuntos, ajudar-te com a BRILHAH, criar lembretes e abrir aplicações autorizadas no teu Android. O que vamos fazer?";
    js("nexusLocalAnswer("+JSONObject.quote("NEXUS · Apresentação")+","+JSONObject.quote(reply)+")");
