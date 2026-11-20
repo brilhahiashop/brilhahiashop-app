@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
   capture=SpeechCapture.start(this,new SpeechCapture.Callback(){
    @Override public void onStatus(String s){js("nexusVoiceState("+JSONObject.quote(s)+")");}
    @Override public void onText(String spoken){js("nexusHeard("+JSONObject.quote(spoken)+")");onSpokenCommand(spoken);}
-   @Override public void onError(String message){continuous=false;js("nexusConversationState(false)");js("nexusVoiceState('idle')");js("nexusFeedback("+JSONObject.quote(message)+")");toast(message);}
+   @Override public void onError(String message){boolean silence=message.startsWith("Não ouvi uma frase completa");js("nexusVoiceState('idle')");if(silence&&continuous&&foreground&&!closed){js("nexusFeedback('A aguardar o próximo pedido…')");voiceHandler.postDelayed(continueListening,1400);}else{continuous=false;js("nexusConversationState(false)");js("nexusFeedback("+JSONObject.quote(message)+")");toast(message);}}
   });
  }
  private void onSpokenCommand(String spoken){
