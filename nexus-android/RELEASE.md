@@ -4,7 +4,7 @@ Interface e avatar incluídos no APK, carregados por origem HTTPS local sem depe
 
 Validação antes da publicação: compilação, Android Lint e teste instrumentado Android 35 de abertura offline, imagem local, ponte nativa, navegação de painéis, recarregamento e estado de paragem.
 
-Limitações: avatar ilustrado animado, sem modelo facial 3D nem lip-sync real; sem gestos por câmara; sensor de proximidade experimental existente. Sem escuta contínua em segundo plano. Sem novas integrações de contas empresariais. Motor remoto requer código privado existente e serviço disponível. Resposta real da IA, fala, reconhecimento, intents e overlay exigem validação no telemóvel. O histórico desta sessão não sincroniza entre dispositivos.
+Limitações: avatar ilustrado animado, sem modelo facial 3D nem lip-sync real; sem gestos por câmara; sensor de proximidade experimental existente. Sem escuta contínua em segundo plano. Sem novas integrações de contas empresariais. Motor remoto requer código privado existente e serviço disponível. Servidor validado com resposta autenticada e meteorologia com dados estruturados. Fala, reconhecimento, intents e overlay exigem validação no telemóvel. O histórico desta sessão não sincroniza entre dispositivos.
 
 Primeira utilização: abrir o APK, autorizar instalação se solicitado, introduzir o código privado do NEXUS em MENU > Código de acesso. Não inserir chave OpenAI. Para o botão flutuante, autorizar Mostrar sobre outras apps e tocar novamente em FLUTUANTE. É necessário um motor de voz Android com voz portuguesa. O botão VOZ utiliza o serviço de reconhecimento do Android, cuja política de dados depende do fornecedor.
 

@@ -8,4 +8,5 @@ await page.evaluate(()=>nexusAnswer({reply:'Resposta de teste',sources:[{url:'ja
 await page.evaluate(()=>{addCard('Música','Painel 2');rotate(-1)});assert.equal(await page.locator('#panelTopic').textContent(),'Fotografia');
 await page.evaluate(()=>nexusFailure('Sem internet'));assert.equal(await page.locator('#notice').textContent(),'Sem internet');
 await page.evaluate(()=>{addCard('Segurança','<script>alert(1)</script>');nexusStopAll()});assert.equal(await page.locator('#panelContent script').count(),0);
+await page.evaluate(()=>nexusAnswer({reply:'Wrong provider',weather:{city:'Viseu',current:{temperature_2m:12,time:'2026-11-20T01:00'},daily:{}},sources:[{title:'Open-Meteo',url:'https://open-meteo.com/'}]}));assert((await page.locator('#panelContent').textContent()).includes('Open-Meteo'));assert(!(await page.locator('#panelContent').textContent()).includes('Wrong provider'));
 await page.screenshot({path:'/tmp/nexus-mobile.png',fullPage:true});assert.deepEqual(errors,[]);console.log('PASS: local assets, avatar, bridge request, sources sanitation, carousel, failure recovery, shutdown state');await browser.close();})();

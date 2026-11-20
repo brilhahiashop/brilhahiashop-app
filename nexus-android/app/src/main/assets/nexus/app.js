@@ -11,7 +11,15 @@ function rotate(direction){if(!cards.length)return;position=(position+direction+
 function classify(q){const topics=[['Meteorologia',/tempo|chuva|meteorolog|temperatura/i],['Notícias',/not[ií]cia|atualidade/i],['Negócios',/neg[oó]cio|brilhah|loja|venda/i],['Redes sociais',/instagram|facebook|redes|tiktok/i],['Ciência',/ci[eê]ncia|espa[cç]o|universo/i],['Tecnologia',/tecnolog|programa|computador/i],['Música',/m[uú]sica|beat|guitarra/i],['Fotografia',/fotograf|c[aâ]mara|evento/i]];return (topics.find(t=>t[1].test(q))||['Conversa'])[0];}
 function ask(question){const q=String(question||'').trim().slice(0,4000);if(!q||state==='thinking')return;if(!native){nexusFailure('Abre a aplicação Android para utilizar a voz e a ligação segura.');return;}native.stop();pending=q;setState('thinking');notice.textContent='A ligar ao servidor…';native.ask(JSON.stringify({message:q,search:true,history:memory.slice(-8)}));}
 window.nexusReceiveQuestion=ask;
-window.nexusAnswer=data=>{const reply=data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);addCard(title,reply,data.sources||[]);memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-8);notice.textContent='';$('.health').textContent='● SERVIDOR RESPONDEU';setState('idle');native.speak(reply);};
+function weatherReply(weather){
+ if(!weather||!weather.current||!Number.isFinite(weather.current.temperature_2m))return null;
+ const number=value=>Number.isFinite(value)?value.toLocaleString('pt-PT'):'—';
+ let text='Temperatura em '+String(weather.city||'local consultado')+': '+number(weather.current.temperature_2m)+' °C.\nAtualização: '+String(weather.current.time||'não indicada')+'.';
+ const d=weather.daily||{};
+ (d.time||[]).slice(0,4).forEach((day,i)=>{text+='\n\n'+String(day)+': mínima '+number((d.temperature_2m_min||[])[i])+' °C · máxima '+number((d.temperature_2m_max||[])[i])+' °C · probabilidade de precipitação '+number((d.precipitation_probability_max||[])[i])+'%.';});
+ return text+'\n\nFonte: Open-Meteo, indicada pelo servidor. A previsão pode mudar.';
+}
+window.nexusAnswer=data=>{const weather=weatherReply(data.weather);const reply=weather||data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=weather?'Meteorologia · '+String(data.weather.city||'Previsão'):typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);addCard(title,reply,data.sources||[]);memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-8);notice.textContent='';$('.health').textContent='● SERVIDOR RESPONDEU';setState('idle');native.speak(reply);};
 window.nexusFailure=error=>{setState('idle');notice.textContent=error;$('.health').textContent='● VERIFICAR LIGAÇÃO';};
 window.nexusClearHistory=()=>{memory=[];cards=[];position=-1;panel.classList.add('hidden');notice.textContent='Contexto desta sessão apagado.';};
 window.nexusStopAll=()=>{if(native)native.stop();pending='';setState('idle');notice.textContent='';};
