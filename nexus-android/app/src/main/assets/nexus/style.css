@@ -193,3 +193,94 @@ html,body{background:#030a15}
 @media(prefers-reduced-motion:reduce){.orbit-motion{animation:none}}
 
 .search-fallback{display:block;color:#b1f7ff;border:1px solid rgba(80,220,250,.5);border-radius:9px;padding:8px 12px;text-decoration:none;background:rgba(9,71,112,.3);font-size:12px;text-align:center;margin-top:8px}.search-fallback.hidden{display:none!important}
+
+
+/* NEXUS 1.1 — JARVIS-style interaction: one hologram, one microphone, one command orbit.
+   All existing advanced Android capabilities are still reachable from the native menu. */
+html,body{margin:0!important;padding:0!important;width:100%;height:100%;overflow:hidden;background:#020914}
+.nexus-minimal{display:flex!important;flex-direction:column;position:relative;width:100%;height:100vh;height:100dvh;min-height:0;max-height:100dvh;overflow:hidden;
+ background:radial-gradient(ellipse at 50% 45%,rgba(6,80,125,.2),transparent 58%),#020914}
+.nexus-minimal *{box-sizing:border-box}
+.nexus-minimal [hidden]{display:none!important}
+.nexus-minimal .topbar{position:relative;z-index:35;display:flex!important;flex:0 0 67px;min-height:67px;align-items:center;justify-content:center;
+ padding:6px 12px 8px!important;box-shadow:none;background:linear-gradient(180deg,rgba(2,10,20,.93),rgba(2,10,20,.24));border-bottom:1px solid rgba(70,205,255,.13)}
+.nexus-minimal .topbar .menu{position:absolute;top:12px;left:13px;width:41px;height:41px;min-width:41px;border:1px solid rgba(116,219,255,.42);border-radius:14px;
+ background:rgba(5,40,65,.56);color:#81eaff;font-size:23px;line-height:1;box-shadow:0 0 22px rgba(49,189,247,.12)}
+.nexus-minimal .brand{padding:0 25px;text-align:center}
+.nexus-minimal .brand-main{font-size:clamp(15px,4.7vw,23px);letter-spacing:.25em;white-space:nowrap;font-weight:380}
+.nexus-minimal .brand-sub{font-size:7px;letter-spacing:.1em;opacity:.62}
+.nexus-minimal .health{position:absolute;right:12px;bottom:-16px;font-size:8px;padding:3px 7px;background:rgba(2,18,31,.8);border-radius:20px}
+.nexus-minimal .stage{position:relative;z-index:1;display:block;flex:1 1 auto;height:0;min-height:0;overflow:visible!important;isolation:isolate;padding:0!important;background:transparent!important}
+.nexus-minimal .hero{position:absolute!important;inset:0;display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start!important;overflow:hidden;
+ height:100%!important;min-height:0!important;padding:0!important;pointer-events:none}
+.nexus-minimal .avatar-wrap{pointer-events:auto;position:relative!important;flex:0 0 auto;margin:5vh auto 0!important;height:min(53vh,460px)!important;max-height:72%!important;width:min(86vw,440px)!important;
+ border:0!important;background:transparent!important;filter:drop-shadow(0 0 27px rgba(30,185,241,.33))}
+.nexus-minimal .avatar{object-fit:contain;object-position:center center}
+.nexus-minimal .avatar-wrap:not(.model-ready){animation:photoDepth 6.8s ease-in-out infinite}
+.nexus-minimal .holo-column{height:73%;opacity:.65}
+.nexus-minimal .holo-ceiling{opacity:.35}
+.nexus-minimal .state{position:absolute!important;top:auto!important;bottom:21px!important;left:0;right:0;margin:0!important;font-size:10px;letter-spacing:.17em;
+ text-align:center;color:#91eefa;opacity:.86;pointer-events:none}
+.nexus-minimal .signal{display:none!important}
+.nexus-minimal .footer{z-index:31;position:relative!important;flex:0 0 79px;height:79px!important;min-height:79px;padding:3px 12px 11px!important;
+ background:linear-gradient(0deg,#030d1b 15%,rgba(3,13,27,.85) 65%,transparent);border:0}
+.nexus-minimal .dock{height:65px;padding:0!important;margin:auto;display:flex;align-items:center;justify-content:center;gap:18px}
+.nexus-minimal #talkBtn{height:65px;width:65px;border:1px solid rgba(129,232,255,.67);
+ background:radial-gradient(circle at 50% 40%,rgba(61,161,211,.55),rgba(10,47,81,.8));box-shadow:0 0 31px rgba(46,191,255,.4);font-size:29px}
+.nexus-minimal #keyboardBtn{height:44px;width:44px;border-radius:50%;font-size:20px;background:rgba(4,34,57,.65);border:1px solid rgba(110,215,255,.32)}
+.nexus-minimal .notice{position:absolute;left:8%;right:8%;bottom:72px;max-height:28px;min-height:0!important;text-align:center;font-size:11px;
+ color:#bef6ff;pointer-events:none;text-shadow:0 0 10px #027db2}
+.nexus-minimal .composer{position:absolute;z-index:45;bottom:83px;left:4%;right:4%;padding:8px;border:1px solid rgba(96,222,255,.54);
+ background:rgba(3,21,39,.97);border-radius:15px;box-shadow:0 0 28px rgba(40,204,255,.2)}
+.nexus-minimal .composer.hidden{display:none!important}
+.nexus-minimal .composer input{min-width:0;flex:1}
+.nexus-minimal .orbit{position:fixed!important;top:auto!important;bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;left:3%!important;right:3%!important;
+ display:flex!important;align-items:center;justify-content:center;height:102px!important;z-index:30;pointer-events:auto;isolation:isolate;padding:0!important;perspective:700px}
+.nexus-minimal .orbit:after{bottom:1px;left:10%;width:80%;height:32px;opacity:.76}
+.nexus-minimal .orbit-deck{position:relative;width:min(84vw,440px)!important;height:101px!important;display:block!important;perspective:600px;transform-style:preserve-3d;overflow:visible}
+.nexus-minimal .orbit-arrow{z-index:32;flex:0 0 20px;font-size:31px;color:#7eecff;text-shadow:0 0 10px rgba(57,204,255,.7)}
+.nexus-minimal .orbit-card{position:absolute;top:12px;left:50%;width:21%;max-width:85px;min-width:0;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+ border:1px solid rgba(77,197,242,.30);background:linear-gradient(140deg,rgba(5,48,73,.81),rgba(5,28,50,.54));color:#96eaff;
+ border-radius:12px;box-shadow:0 3px 20px rgba(0,111,181,.20);transition:transform .38s cubic-bezier(.17,.87,.31,1.12),opacity .25s,filter .25s}
+.nexus-minimal .orbit-card[data-slot="-2"]{transform:translateX(calc(-50% - min(34vw,146px))) rotateY(61deg) scale(.72);opacity:.32;filter:blur(.6px)}
+.nexus-minimal .orbit-card[data-slot="-1"]{transform:translateX(calc(-50% - min(19vw,82px))) rotateY(36deg) scale(.88);opacity:.73}
+.nexus-minimal .orbit-card[data-slot="0"]{transform:translateX(-50%) translateZ(35px) scale(1.13);z-index:3;height:78px;top:7px;
+ border:1px solid rgba(137,241,255,.86);background:linear-gradient(160deg,rgba(17,100,138,.82),rgba(8,36,65,.94));color:#d5ffff;
+ box-shadow:0 0 26px rgba(42,204,255,.57),inset 0 0 23px rgba(70,189,241,.17)}
+.nexus-minimal .orbit-card[data-slot="1"]{transform:translateX(calc(-50% + min(19vw,82px))) rotateY(-36deg) scale(.88);opacity:.73}
+.nexus-minimal .orbit-card[data-slot="2"]{transform:translateX(calc(-50% + min(34vw,146px))) rotateY(-61deg) scale(.72);opacity:.32;filter:blur(.6px)}
+.nexus-minimal .orbit-icon{font-size:24px}.nexus-minimal .orbit-card.selected .orbit-icon{font-size:29px}
+.nexus-minimal .orbit-name{font-size:8px;font-weight:600;letter-spacing:.1em;overflow-wrap:anywhere}
+.nexus-minimal .orbit-motion{animation:nexusOrbitTurn .42s ease-in-out}
+@keyframes nexusOrbitTurn{0%{transform:rotateY(-16deg) scale(.96)}65%{transform:rotateY(8deg) scale(1.01)}100%{transform:rotateY(0deg) scale(1)}}
+.nexus-minimal .panel{position:fixed!important;z-index:26;top:auto!important;bottom:calc(198px + env(safe-area-inset-bottom,0px))!important;left:4%!important;width:92%!important;
+ max-height:min(24vh,175px)!important;padding:10px 12px!important;margin:0!important;border-radius:18px;background:linear-gradient(135deg,rgba(5,36,65,.93),rgba(3,15,31,.96));
+ border:1px solid rgba(88,213,255,.57);box-shadow:0 0 34px rgba(24,168,231,.23);overflow:hidden;backdrop-filter:blur(12px)}
+.nexus-minimal .panel.hidden{display:none!important}
+.nexus-minimal .panel-head{margin:0 0 4px}
+.nexus-minimal .panel-topic{font-size:12px;line-height:1.15;letter-spacing:.08em;max-height:31px;overflow:hidden}
+.nexus-minimal .panel-sub{font-size:8px}
+.nexus-minimal .panel .close{width:30px;height:30px;flex-basis:30px}
+.nexus-minimal .panel-content{max-height:55px!important;overflow:hidden!important;font-size:12px;line-height:1.3}
+.nexus-minimal .panel-content p{margin:0 0 6px}
+.nexus-minimal .panel-expand{margin-top:5px;font-size:11px;padding:1px 2px}
+.nexus-minimal .panel-sources{display:none}
+.nexus-minimal .carousel-nav{display:none}
+.nexus-minimal .panel.expanded{z-index:40;inset:69px 4% 84px 4%!important;width:92%!important;max-height:none!important;overflow-y:auto;display:flex;flex-direction:column;padding:17px!important}
+.nexus-minimal .panel.expanded .panel-topic{font-size:17px;max-height:none}
+.nexus-minimal .panel.expanded .panel-content{max-height:none!important;overflow:visible!important;font-size:15px;line-height:1.55}
+.nexus-minimal .panel.expanded .panel-sources{display:block}
+.nexus-minimal .panel.expanded .carousel-nav{display:flex}
+.nexus-minimal .panel.expanded .search-fallback{display:block}
+.nexus-minimal .search-fallback.hidden{display:none!important}
+.nexus-minimal .legacy-controls{display:none!important}
+@media(max-height:680px){
+ .nexus-minimal .topbar{flex-basis:57px;min-height:57px}
+ .nexus-minimal .avatar-wrap{margin-top:1vh!important;height:min(47vh,330px)!important}
+ .nexus-minimal .orbit{bottom:calc(77px + env(safe-area-inset-bottom,0px))!important;height:90px!important}
+ .nexus-minimal .panel{bottom:calc(171px + env(safe-area-inset-bottom,0px))!important;max-height:115px!important}
+ .nexus-minimal .footer{flex-basis:66px;min-height:66px;height:66px!important}
+ .nexus-minimal .dock{height:62px}.nexus-minimal #talkBtn{height:56px;width:56px}
+ .nexus-minimal .panel.expanded{inset:58px 4% 74px 4%!important;max-height:none!important}
+}
+@media(prefers-reduced-motion:reduce){.nexus-minimal .orbit-motion{animation:none!important}}
