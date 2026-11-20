@@ -1,55 +1,68 @@
-<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>NEXUS</title><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"><meta name="theme-color" content="#06101c"><link rel="stylesheet" href="style.css"></head><body>
-<div class="app">
-<header class="topbar">
-  <button class="menu">☰</button>
-  <div class="brand"><div class="brand-main">✦ N E X U S</div><div class="brand-sub">HOLOGRAPHIC INTELLIGENCE</div></div>
-  <div class="health">● INTERFACE LOCAL</div>
-</header>
-<main class="stage">
-  <div class="grid"></div><div class="holo-column" aria-hidden="true"></div><div class="holo-ceiling" aria-hidden="true"></div>
-  <section class="hero">
-    <div class="halo halo1"></div><div class="halo halo2"></div>
-    <button type="button" class="holo-panel holo-panel-left holo-action" id="hudApps" aria-label="Ver aplicações"><small>APLICAÇÕES</small><b>ABRIR</b><span>▣</span></button>
-    <button type="button" class="holo-panel holo-panel-right holo-action" id="hudAgenda" aria-label="Ver agenda"><small>AGENDA</small><b>LEMBRETES</b><span>◷</span></button>
-    <div class="holo-ruler" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-    <div id="avatarWrap" class="avatar-wrap state-idle" tabindex="0">
-      <div class="rings"></div>
-      <div class="scan"></div>
-      <img src="portrait-real.webp" alt="NEXUS holograma" class="avatar">
-      <div class="eyes eye-l"></div><div class="eyes eye-r"></div>
-      <div class="blink blink-l"></div><div class="blink blink-r"></div>
-      <div class="mouth"></div>
-    </div>
-    <nav class="orbit" id="nexusOrbit" aria-label="Controlo holográfico de funções">
-      <button id="orbitPrev" class="orbit-arrow" aria-label="Função anterior">‹</button>
-      <div class="orbit-deck" id="orbitDeck" aria-live="polite">
-        <button class="orbit-card" type="button" data-slot="-2" aria-label="Opção anterior"></button>
-        <button class="orbit-card" type="button" data-slot="-1" aria-label="Opção à esquerda"></button>
-        <button class="orbit-card" type="button" data-slot="0" aria-label="Executar opção selecionada"></button>
-        <button class="orbit-card" type="button" data-slot="1" aria-label="Opção à direita"></button>
-        <button class="orbit-card" type="button" data-slot="2" aria-label="Próxima opção"></button>
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#030c18">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>NEXUS · Assistente holográfico</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app nexus-minimal">
+  <header class="topbar">
+    <button type="button" class="menu" aria-label="Menu e definições do NEXUS" title="Opções">☰</button>
+    <div class="brand"><div class="brand-main">✦ N E X U S</div><div class="brand-sub">ASSISTENTE HOLOGRÁFICO PESSOAL</div></div>
+    <div class="health" aria-live="polite">● PRONTO</div>
+  </header>
+  <main class="stage">
+    <div class="grid"></div><div class="holo-column" aria-hidden="true"></div><div class="holo-ceiling" aria-hidden="true"></div>
+    <section class="hero" aria-label="Holograma do NEXUS">
+      <div class="halo halo1"></div><div class="halo halo2"></div>
+      <div id="avatarWrap" class="avatar-wrap state-idle" tabindex="0" role="button" aria-label="Tocar para falar com o NEXUS">
+        <div class="rings"></div><div class="scan"></div>
+        <img src="portrait-real.webp" alt="Avatar holográfico NEXUS" class="avatar">
+        <div class="eyes eye-l"></div><div class="eyes eye-r"></div>
+        <div class="blink blink-l"></div><div class="blink blink-r"></div><div class="mouth"></div>
       </div>
-      <button id="orbitNext" class="orbit-arrow" aria-label="Próxima função">›</button>
+      <div id="stateText" class="state">TOCA PARA FALAR</div>
+      <div class="signal"><span class="dot"></span><span id="avatarInfo">NEXUS DISPONÍVEL</span><span class="bars">▮▮▮▮▮▮</span></div>
+    </section>
+    <section id="panel" class="panel hidden" aria-label="Resultado do NEXUS" aria-live="polite">
+      <div class="panel-head"><div><div id="panelTopic" class="panel-topic">NEXUS</div><div id="panelStatus" class="panel-sub">Resposta do NEXUS</div></div><button id="closePanel" class="close" aria-label="Fechar resposta">✕</button></div>
+      <div id="panelContent" class="panel-content"></div>
+      <button id="panelExpand" type="button" class="panel-expand" aria-expanded="false">Ver resposta completa</button>
+      <nav class="carousel-nav"><button id="previous" aria-label="Resposta anterior">‹</button><span id="panelCount"></span><button id="next" aria-label="Próxima resposta">›</button></nav>
+      <div id="panelSources" class="panel-sources"></div>
+      <a id="searchFallback" class="search-fallback hidden" href="https://www.google.com/" rel="noopener noreferrer">Abrir pesquisa no Google</a>
+    </section>
+    <nav class="orbit" id="nexusOrbit" aria-label="Funções holográficas: deslizar ou tocar para escolher">
+      <button type="button" id="orbitPrev" class="orbit-arrow" aria-label="Função anterior">‹</button>
+      <div class="orbit-deck" id="orbitDeck" aria-live="polite">
+        <button type="button" class="orbit-card" data-slot="-2" aria-label="Função lateral"></button>
+        <button type="button" class="orbit-card" data-slot="-1" aria-label="Função à esquerda"></button>
+        <button type="button" class="orbit-card" data-slot="0" aria-label="Executar função selecionada"></button>
+        <button type="button" class="orbit-card" data-slot="1" aria-label="Função à direita"></button>
+        <button type="button" class="orbit-card" data-slot="2" aria-label="Função lateral"></button>
+      </div>
+      <button type="button" id="orbitNext" class="orbit-arrow" aria-label="Próxima função">›</button>
     </nav>
-    <div id="stateText" class="state">TOCA NO NEXUS PARA FALAR</div>
-    <div class="signal"><span class="dot"></span><span id="avatarInfo">NEXUS ONLINE</span><span class="bars">▮▮▮▮▮▮</span></div>
-  </section>
-  <section id="panel" class="panel hidden">
-    <div class="panel-head"><div><div id="panelTopic" class="panel-topic">NEXUS</div><div class="panel-sub" id="panelStatus">Resposta do NEXUS</div></div><button id="closePanel" class="close">✕</button></div>
-    <button id="panelExpand" type="button" class="panel-expand" aria-expanded="false">Ver resposta completa</button><div id="panelContent" class="panel-content"></div>
-    <nav class="carousel-nav"><button id="previous" aria-label="Painel anterior">‹</button><span id="panelCount"></span><button id="next" aria-label="Painel seguinte">›</button></nav>
-    <div id="panelSources" class="panel-sources"></div><a id="searchFallback" class="search-fallback hidden" href="https://www.google.com/" rel="noopener noreferrer">Abrir pesquisa no navegador</a>
-  </section>
-</main>
-<footer class="footer">
-  <div class="nexus-quick-actions">
-   <button type="button" id="learnBtn" class="learn-cta">✦ ENSINAR <span>MEMÓRIA LOCAL</span></button>
-   <button type="button" id="handsFreeBtn" class="learn-cta hands-free-cta" aria-pressed="false">◉ MÃOS LIVRES <span id="handsFreeStatus">DESLIGADO</span></button>
-  </div>
-  <div class="mode-controls"><button id="avatarMode">3D</button><button id="gestureBtn">GESTOS</button><button id="conversationBtn" aria-pressed="false">CONVERSA</button><button id="operatorBtn">OPERADOR</button></div><div class="footer-top">VOZ · PESQUISA · INTELIGÊNCIA PESSOAL</div>
-  <div class="dock"><button id="keyboardBtn" class="dock-btn small">⌨</button><button id="talkBtn" class="dock-btn center">◉</button><button id="clearBtn" class="dock-btn small">✦</button></div>
-  <form id="composer" class="composer hidden"><input id="textInput" placeholder="Pergunta-me o que quiseres…"><button>➤</button></form>
-  <div id="notice" class="notice"></div>
-</footer>
+  </main>
+  <footer class="footer">
+    <div class="dock">
+      <button type="button" id="keyboardBtn" class="dock-btn small" aria-label="Escrever pergunta">⌨</button>
+      <button type="button" id="talkBtn" class="dock-btn center" aria-label="Falar com NEXUS">◉</button>
+    </div>
+    <form id="composer" class="composer hidden"><input id="textInput" type="text" placeholder="Pergunta ou dá uma ordem..." autocomplete="off" aria-label="Mensagem ao NEXUS"><button type="submit" aria-label="Enviar pergunta">➤</button></form>
+    <div id="notice" class="notice" aria-live="polite"></div>
+    <!-- These existing bridge controls remain available via the native menu, not as clutter on screen. -->
+    <div class="legacy-controls" hidden aria-hidden="true">
+      <button id="hudApps" type="button">Aplicações</button><button id="hudAgenda" type="button">Agenda</button>
+      <button id="learnBtn" type="button">Ensinar</button><button id="handsFreeBtn" type="button" aria-pressed="false">Mãos livres</button><span id="handsFreeStatus">DESLIGADO</span>
+      <button id="avatarMode" type="button">3D</button><button id="gestureBtn" type="button">Gestos</button><button id="conversationBtn" type="button" aria-pressed="false">Conversa</button>
+      <button id="operatorBtn" type="button">Operador</button><button id="clearBtn" type="button">Painéis</button>
+    </div>
+  </footer>
 </div>
-<script src="three.min.js"></script><script src="avatar3d.js"></script><script src="photoRig.js"></script><script src="app.js"></script><script src="orbit.js"></script></body></html>
+<script src="three.min.js"></script><script src="avatar3d.js"></script><script src="photoRig.js"></script><script src="app.js"></script><script src="orbit.js"></script>
+</body></html>
