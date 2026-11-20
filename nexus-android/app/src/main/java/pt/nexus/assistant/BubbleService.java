@@ -209,7 +209,7 @@ public final class BubbleService extends Service implements SensorEventListener 
         PendingIntent stop=PendingIntent.getService(this,101,closeIntent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification n=new Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.nexus_icon)
           .setContentTitle("NEXUS — Controlo holográfico")
-          .setContentText("Toca na esfera para abrir painéis. Voz só após o teu toque.")
+          .setContentText("Esfera e painéis flutuantes. Para escuta sem toque, ativa MÃOS LIVRES no NEXUS.")
           .setContentIntent(open).setOngoing(true)
           .addAction(new Notification.Action.Builder(R.drawable.nexus_icon,"Desativar",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34)startForeground(911,n,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);

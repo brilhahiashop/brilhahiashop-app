@@ -45,6 +45,16 @@ window.nexusClearHistory=()=>{memory=[];cards=[];position=-1;panel.classList.add
 window.nexusStopAll=()=>{if(native)native.stop();pendingRequest=false;pending='';setState('idle');notice.textContent='';};
 function talk(){if(!native){nexusFailure('Voz disponível na aplicação Android.');return;}if(speaking){native.stop();setState('idle');return;}native.listen();}
 $('#learnBtn').onclick=()=>{if(native&&native.command)native.command('NEXUS, vou ensinar-te uma rotina');else notice.textContent='Modo aprendizagem disponível no Android.';};
+window.nexusHandsFreeState=enabled=>{
+ const b=$('#handsFreeBtn');if(!b)return;
+ b.setAttribute('aria-pressed',enabled?'true':'false');
+ $('#handsFreeStatus').textContent=enabled?'MICROFONE ATIVO':'DESLIGADO';
+};
+$('#handsFreeBtn').onclick=()=>{
+ if(native&&native.handsFree)native.handsFree();
+ else notice.textContent='Modo mãos livres disponível na aplicação Android.';
+};
+if(native&&native.handsFreeActive)window.nexusHandsFreeState(native.handsFreeActive());
 $('#talkBtn').onclick=talk;avatarWrap.onclick=talk;$('.menu').onclick=()=>native&&native.menu();
 $('#keyboardBtn').onclick=()=>{$('#composer').classList.toggle('hidden');if(!$('#composer').classList.contains('hidden'))$('#textInput').focus();};
 $('#composer').onsubmit=e=>{e.preventDefault();ask($('#textInput').value);$('#textInput').value='';};

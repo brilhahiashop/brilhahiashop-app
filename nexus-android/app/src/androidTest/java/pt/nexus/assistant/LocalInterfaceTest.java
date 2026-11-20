@@ -14,7 +14,16 @@ import java.util.concurrent.*;
 public class LocalInterfaceTest {
  private WebView find(View v){if(v instanceof WebView)return (WebView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){WebView w=find(g.getChildAt(i));if(w!=null)return w;}}return null;}
  private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(5,TimeUnit.SECONDS);}
- @Test public void recognizedAppsAndLearningMemory() throws Exception {
+ @Test public void handsFreeWakeWordAndAppSwitchingParsing(){
+  assertEquals("abre facebook",HandsFreeService.commandAfterWakeWord("NEXUS, abre Facebook"));
+  assertEquals("muda para instagram",HandsFreeService.commandAfterWakeWord("NEXUS muda para Instagram"));
+  assertNull(HandsFreeService.commandAfterWakeWord("Abre o Facebook"));
+  assertEquals("facebook",HandsFreeService.requestedApp("abre o meu face"));
+  assertEquals("instagram",HandsFreeService.requestedApp("muda para Instagram"));
+  assertEquals("whatsapp",HandsFreeService.requestedApp("abre o WhatsApp"));
+  assertEquals("facebook",HandsFreeService.requestedApp("como é que se abre o meu face"));
+ }
+  @Test public void recognizedAppsAndLearningMemory() throws Exception {
   assertEquals("facebook",CommandRouter.appName("o Facebook"));
   assertEquals("facebook",CommandRouter.appName("Face"));
   assertEquals("instagram",CommandRouter.appName("Insta"));

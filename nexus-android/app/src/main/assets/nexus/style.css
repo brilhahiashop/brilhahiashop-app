@@ -73,3 +73,11 @@ body{background:
 @keyframes platformPulse{0%,100%{opacity:.4;scale:.97}50%{opacity:.84;scale:1.03}}
 @media(max-width:390px){.holo-panel{max-width:95px;font-size:6px;padding:6px}.holo-panel b{font-size:7px}.learn-cta{font-size:8px}.avatar-wrap{width:min(73vw,430px)}}
 @media(prefers-reduced-motion:reduce){.holo-column,.holo-ceiling,.holo-ruler,.holo-panel,.avatar-wrap:after{animation:none!important}}
+
+/* 0.6.1: explicit hands-free session toggle; no covert mic mode */
+.nexus-quick-actions{display:flex;justify-content:center;align-items:stretch;gap:8px;width:96%;max-width:580px;margin:2px auto 7px}
+.nexus-quick-actions .learn-cta{margin:0;width:50%;min-width:0;display:flex;gap:5px;justify-content:center;flex-direction:column;padding:7px 5px;font-size:10px;min-height:40px}
+.nexus-quick-actions .learn-cta span{display:block;letter-spacing:.12em;font-size:8px}
+.nexus-quick-actions .hands-free-cta[aria-pressed="true"]{border-color:rgba(92,255,183,.86);background:linear-gradient(120deg,rgba(17,83,64,.77),rgba(5,30,47,.7));color:#a0ffdb;box-shadow:0 0 18px rgba(52,241,170,.24)}
+.nexus-quick-actions .hands-free-cta[aria-pressed="true"] span{color:#6cf6bc}
+@media(max-width:390px){.nexus-quick-actions .learn-cta{font-size:9px}.nexus-quick-actions .learn-cta span{font-size:7px}}
