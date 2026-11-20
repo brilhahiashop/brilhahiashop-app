@@ -193,7 +193,7 @@ public final class HandsFreeService extends Service {
     boolean ok=launchApp(target);
     if(ok){
       // startActivity() can be silently blocked for a background process on Android.
-      queuedCommand=null;
+      queuedCommand=speech;
       update("Abertura de "+target+" solicitada · se não apareceu, toca na notificação.");
       tell("Pedi ao Android para abrir "+target+". Se não apareceu, toca na notificação do NEXUS.",false);
     }else{
