@@ -6,7 +6,19 @@ function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(valu
 window.nexusVoiceState=setState;
 window.nexusGreeting=text=>{notice.textContent=text;};
 window.nexusFeedback=text=>{notice.textContent=text;};
-window.nexusHeard=text=>{lastNativeCommand=text;notice.textContent='Ouvi: '+text;};
+function focusForQuery(question){
+ const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ let topic='voice';
+ if(/\b(alarme|despertador|agenda|lembrete|temporizador|calendario|compromisso|horas)\b/.test(q))topic='agenda';
+ else if(/\b(aprende|ensina|rotina|memoriza|aprendizagem)\b/.test(q))topic='learning';
+ else if(/\b(configuracao|definicoes|permissao|sistema|acessibilidade|diagnostico)\b/.test(q))topic='settings';
+ else if(/\b(opera|toca no ecra|desliza|volta atras|ecran|operador)\b/.test(q))topic='operator';
+ else if(/\b(abre|abrir|aplicacao|app|facebook|whatsapp|instagram|youtube|spotify|liga|telefonar|chamada|mensagem|sms)\b/.test(q))topic='apps';
+ else if(/\b(pesquisa|procura|investiga|noticia|noticias|recente|atual|preco|onde|quem|qual|quais|porque|quando|como|internet|google|receita|meteorologia|tempo)\b/.test(q))topic='research';
+ if(window.nexusOrbitalFocus)window.nexusOrbitalFocus(topic);
+}
+window.nexusAutoFocus=focusForQuery;
+window.nexusHeard=text=>{lastNativeCommand=text;focusForQuery(text);notice.textContent='Ouvi: '+text;};
 window.nexusLocalAnswer=(title,reply)=>{
   pendingRequest=false;
   if(lastNativeCommand){memory.push({role:'user',content:lastNativeCommand},{role:'assistant',content:reply});memory=memory.slice(-16);lastNativeCommand='';}
@@ -22,7 +34,7 @@ if(fallback){
  fallback.classList.toggle('hidden',!missing);
  if(missing){fallback.href='https://www.google.com/search?q='+encodeURIComponent(card.query||'notícias Portugal hoje');fallback.textContent='Abrir pesquisa no Google';}
 }$('#panelContent').replaceChildren(textBlocks(card.reply));$('#panelSources').replaceChildren();(card.sources||[]).slice(0,6).forEach(source=>{if(!source||typeof source!=='object')return;try{const u=new URL(source.url);if(u.protocol!=='https:')return;const a=document.createElement('a');a.href=u.href;a.textContent=source.title||u.hostname;a.rel='noopener noreferrer';$('#panelSources').appendChild(a);}catch{}});$('#panelCount').textContent=(position+1)+' / '+cards.length;}
-function addCard(title,reply,sources=[]){cards.push({title,reply,sources,query:pending});if(cards.length>30)cards.shift();position=cards.length-1;renderCard();}
+function addCard(title,reply,sources=[]){panel.classList.remove('expanded');$('#panelExpand').setAttribute('aria-expanded','false');$('#panelExpand').textContent='Ver resposta completa';cards.push({title,reply,sources,query:pending});if(cards.length>30)cards.shift();position=cards.length-1;renderCard();}
 function rotate(direction){if(!cards.length)return;position=(position+direction+cards.length)%cards.length;renderCard(direction);}
 function classify(q){const topics=[['Meteorologia',/tempo|chuva|meteorolog|temperatura/i],['Notícias',/not[ií]cia|atualidade/i],['Negócios',/neg[oó]cio|brilhah|loja|venda/i],['Redes sociais',/instagram|facebook|redes|tiktok/i],['Ciência',/ci[eê]ncia|espa[cç]o|universo/i],['Tecnologia',/tecnolog|programa|computador/i],['Música',/m[uú]sica|beat|guitarra/i],['Fotografia',/fotograf|c[aâ]mara|evento/i]];return (topics.find(t=>t[1].test(q))||['Conversa'])[0];}
 function isLocalInstruction(q){
@@ -32,13 +44,7 @@ function isLocalInstruction(q){
 function ask(question,forceAI=false){
  const q=String(question||'').trim().slice(0,4000);
  if(!q||pendingRequest)return;
- if(window.nexusOrbitalFocus){
-   const simplified=q.toLocaleLowerCase('pt-PT').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-   if(/\b(pesquisa|noticias|procurar|informacao|investiga|preco|internet|google)\b/.test(simplified))nexusOrbitalFocus('research');
-   else if(/\b(alarme|despertador|agenda|lembrete|compromisso|calendario)\b/.test(simplified))nexusOrbitalFocus('agenda');
-   else if(/\b(aprende|ensina|rotina|aprendizagem)\b/.test(simplified))nexusOrbitalFocus('learning');
-   else if(/\b(abre|abrir|instagram|whatsapp|facebook|youtube|aplicacao)\b/.test(simplified))nexusOrbitalFocus('apps');
- }
+ focusForQuery(q);
 
  if(!native){nexusFailure('Abre a aplicação Android para utilizar a voz e a ligação segura.');return;}
  if(!forceAI&&native.command){lastNativeCommand=q;notice.textContent='NEXUS a interpretar: '+q;native.command(q);return;}
