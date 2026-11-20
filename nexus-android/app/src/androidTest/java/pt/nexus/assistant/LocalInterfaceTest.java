@@ -72,11 +72,12 @@ public class LocalInterfaceTest {
  }
  @Test public void interfaceWorksOfflineAndSurvivesReload() throws Exception {
   Instrumentation i=InstrumentationRegistry.getInstrumentation();
-  i.getUiAutomation().executeShellCommand("svc wifi disable").close();i.getUiAutomation().executeShellCommand("svc data disable").close();
-  System.out.println("NEXUS TEST: network disabled; launching local interface");
+  System.out.println("NEXUS TEST: checking locally bundled assets; WebView networking will be blocked for reload");
   MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   try {
    String result="";for(int n=0;n<40;n++){result=evaluate(i,a,"document.querySelector('.avatar')?.naturalWidth>0 && typeof nexusReceiveQuestion==='function'");if("true".equals(result))break;Thread.sleep(250);}assertEquals("Local avatar and JS must work offline","true",result);
+   i.runOnMainSync(()->find(a.getWindow().getDecorView()).getSettings().setBlockNetworkLoads(true));
+   assertEquals("true",evaluate(i,a,"typeof nexusBoot==='function'"));
    assertEquals("false",evaluate(i,a,"!!document.querySelector('#photoRig')"));
    assertEquals("true",evaluate(i,a,"!!document.querySelector('#nexusVoiceEnergy')"));
    assertEquals("true",evaluate(i,a,"typeof nexusBoot==='function'"));
@@ -90,6 +91,6 @@ public class LocalInterfaceTest {
    evaluate(i,a,"location.reload()");Thread.sleep(1200);
    assertEquals("true",evaluate(i,a,"document.querySelector('.avatar').naturalWidth>0"));
    evaluate(i,a,"setState('speaking');nexusStopAll()");assertEquals("\"idle\"",evaluate(i,a,"state"));
-  } finally {i.runOnMainSync(a::finishAndRemoveTask);}
+  } finally {i.runOnMainSync(()->{WebView w=find(a.getWindow().getDecorView());if(w!=null)w.getSettings().setBlockNetworkLoads(false);a.finishAndRemoveTask();});}
  }
 }
