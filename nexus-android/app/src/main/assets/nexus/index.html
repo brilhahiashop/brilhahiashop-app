@@ -1,0 +1,37 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>NEXUS</title><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"><meta name="theme-color" content="#06101c"><link rel="stylesheet" href="style.css"></head><body>
+<div class="app">
+<header class="topbar">
+  <button class="menu">☰</button>
+  <div class="brand"><div class="brand-main">✦ N E X U S</div><div class="brand-sub">HOLOGRAPHIC INTELLIGENCE</div></div>
+  <div class="health">● INTERFACE LOCAL</div>
+</header>
+<main class="stage">
+  <div class="grid"></div>
+  <section class="hero">
+    <div class="halo halo1"></div><div class="halo halo2"></div>
+    <div id="avatarWrap" class="avatar-wrap state-idle" tabindex="0">
+      <div class="rings"></div>
+      <div class="scan"></div>
+      <img src="avatar.webp" alt="NEXUS holograma" class="avatar">
+      <div class="eyes eye-l"></div><div class="eyes eye-r"></div>
+      <div class="blink blink-l"></div><div class="blink blink-r"></div>
+      <div class="mouth"></div>
+    </div>
+    <div id="stateText" class="state">TOCA NO NEXUS PARA FALAR</div>
+    <div class="signal"><span class="dot"></span><span>AVATAR ILUSTRADO · VOZ ANDROID</span><span class="bars">▮▮▮▮▮▮</span></div>
+  </section>
+  <section id="panel" class="panel hidden">
+    <div class="panel-head"><div><div id="panelTopic" class="panel-topic">NEXUS</div><div class="panel-sub">FONTES APENAS QUANDO DEVOLVIDAS PELO SERVIDOR</div></div><button id="closePanel" class="close">✕</button></div>
+    <div id="panelContent" class="panel-content"></div>
+    <nav class="carousel-nav"><button id="previous" aria-label="Painel anterior">‹</button><span id="panelCount"></span><button id="next" aria-label="Painel seguinte">›</button></nav>
+    <div id="panelSources" class="panel-sources"></div>
+  </section>
+</main>
+<footer class="footer">
+  <div class="footer-top">VOZ · PESQUISA · INTELIGÊNCIA PESSOAL</div>
+  <div class="dock"><button id="keyboardBtn" class="dock-btn small">⌨</button><button id="talkBtn" class="dock-btn center">◉</button><button id="clearBtn" class="dock-btn small">✦</button></div>
+  <form id="composer" class="composer hidden"><input id="textInput" placeholder="Pergunta-me o que quiseres…"><button>➤</button></form>
+  <div id="notice" class="notice"></div>
+</footer>
+</div>
+<script src="app.js"></script></body></html>
