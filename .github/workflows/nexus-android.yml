@@ -44,7 +44,16 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: gradle -p nexus-android :app:connectedDebugAndroidTest --no-daemon --stacktrace
+          ram-size: 1536M
+          cores: 2
+          emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: |
+            adb logcat -c
+            adb logcat > /tmp/nexus-android-logcat.txt &
+            gradle -p nexus-android :app:connectedDebugAndroidTest --no-daemon --stacktrace
+            adb shell am start -n pt.nexus.assistant/.MainActivity
+            sleep 3
+            adb exec-out screencap -p > /tmp/nexus-android-screen.png
       - name: Reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,6 +62,9 @@ jobs:
           path: |
             nexus-android/app/build/reports
             /tmp/nexus-mobile.png
+            /tmp/nexus-android-logcat.txt
+            /tmp/nexus-android-screen.png
+            nexus-android/app/build/outputs/androidTest-results
       - name: Publish tested APK
         env:
           GH_TOKEN: ${{ github.token }}

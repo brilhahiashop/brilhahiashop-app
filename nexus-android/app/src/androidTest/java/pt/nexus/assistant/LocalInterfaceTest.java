@@ -17,9 +17,11 @@ public class LocalInterfaceTest {
  @Test public void interfaceWorksOfflineAndSurvivesReload() throws Exception {
   Instrumentation i=InstrumentationRegistry.getInstrumentation();
   i.getUiAutomation().executeShellCommand("svc wifi disable").close();i.getUiAutomation().executeShellCommand("svc data disable").close();
+  System.out.println("NEXUS TEST: network disabled; launching local interface");
   MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   try {
    String result="";for(int n=0;n<40;n++){result=evaluate(i,a,"document.querySelector('.avatar')?.naturalWidth>0 && typeof nexusReceiveQuestion==='function'");if("true".equals(result))break;Thread.sleep(250);}assertEquals("Local avatar and JS must work offline","true",result);
+   System.out.println("NEXUS TEST: local avatar loaded offline");
    assertEquals("\"https://appassets.androidplatform.net\"",evaluate(i,a,"location.origin"));
    assertEquals("true",evaluate(i,a,"typeof NexusNative.listen==='function'"));
    evaluate(i,a,"addCard('Fotografia','Teste local');addCard('Música','Segundo painel');rotate(-1)");
