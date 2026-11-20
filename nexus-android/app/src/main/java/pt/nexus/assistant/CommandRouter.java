@@ -24,7 +24,7 @@ public final class CommandRouter {
     }
     public static String dispatch(Activity a, String spoken) {
         String raw = spoken == null ? "" : spoken.trim();
-        String q = plain(raw).replaceFirst("^(ola\\s+)?(nexus|nexos)[,!: ]*", "").trim();
+        String q = plain(raw).replaceFirst("^(ola\\s+)?(nexus|nexos|anexos)[,!: ]*", "").trim();
         if (q.length() == 0) return "Não ouvi nenhum comando.";
         if(q.matches("^(sair do nexus|fecha o nexus|fechar nexus|sair do nexos)$")){a.getSharedPreferences("privacy",0).edit().putBoolean("exited",true).apply();a.stopService(new Intent(a,BubbleService.class));a.stopService(new Intent(a,HandsFreeService.class));a.stopService(new Intent(a,ReminderSpeechService.class));a.finishAndRemoveTask();return "NEXUS encerrado.";}
         // "fecha o Facebook e abre o Instagram": switches apps; Android keeps the first in memory.
