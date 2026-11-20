@@ -30,6 +30,7 @@ jobs:
         run: |
           base64 -d nexus-android/project.zip.b64 > /tmp/nexus-project.zip
           unzip -oq /tmp/nexus-project.zip -d nexus-android
+          python3 nexus-android/patch-privacy.py
       - name: Build debug APK
         run: gradle -p nexus-android :app:assembleDebug --stacktrace --no-daemon
       - name: Guardar APK
@@ -42,10 +43,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.3.0.apk
-          if gh release view "nexus-android-v0.3.0" >/dev/null 2>&1; then
-            gh release upload "nexus-android-v0.3.0" NEXUS-Android-v0.3.0.apk --clobber
+          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.3.1.apk
+          if gh release view "nexus-android-v0.3.1" >/dev/null 2>&1; then
+            gh release upload "nexus-android-v0.3.1" NEXUS-Android-v0.3.1.apk --clobber
           else
-            gh release create "nexus-android-v0.3.0" NEXUS-Android-v0.3.0.apk --target "${GITHUB_SHA}" \
-              --title "NEXUS Android v0.3.0" --notes "APK de teste: carrossel 3D flutuante com rotação por deslize, comando por voz e gestos de proximidade opcionais. Não faz rastreio de mãos por câmara nem encerra apps à força."
+            gh release create "nexus-android-v0.3.1" NEXUS-Android-v0.3.1.apk --target "${GITHUB_SHA}" \
+              --title "NEXUS Android v0.3.1" --notes "APK de teste: botão Sair desliga áudio, captura e painel flutuante; ao minimizar também pára microfone e câmara; ao remover dos recentes desativa serviço. Botão WEB para quando o ecrã integrado falhar."
           fi
