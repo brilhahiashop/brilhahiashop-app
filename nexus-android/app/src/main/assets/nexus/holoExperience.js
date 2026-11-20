@@ -29,7 +29,7 @@
   if(booted)return;
   booted=true;
   const cleaned=escapeText(text||'Olá. Sou o NEXUS. Em que posso ajudar?');
-  boot.querySelector('.welcome-main').textContent=cleaned.startsWith('Olá')?'Olá. Sou o NEXUS.':cleaned.slice(0,86);
+  boot.querySelector('.welcome-main').textContent=cleaned.startsWith('Olá')?'Olá André. Sou o NEXUS.':cleaned.slice(0,86);
   boot.querySelector('.welcome-sub').textContent='Em que posso ajudar?';
   boot.classList.add('visible');
   document.body.classList.add('nexus-booting');
