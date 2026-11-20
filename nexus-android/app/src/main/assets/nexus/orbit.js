@@ -16,7 +16,7 @@
   {id:'operator',icon:'⌘',title:'OPERADOR',action:()=>window.NexusNative?.operator?.()},
   {id:'settings',icon:'⚙',title:'SISTEMA',action:()=>window.NexusNative?.menu?.()}
  ];
- let current=0,locked=false,lastTopic='voice';
+ let current=0,lastActionId='',lastActionAt=0,lastTopic='voice';
  const slots=[...deck.querySelectorAll('.orbit-card')];
  const modulo=n=>((n%opts.length)+opts.length)%opts.length;
  function select(index,animate=true){
@@ -41,9 +41,11 @@
  function advance(delta){select(current+delta)}
  function perform(){
   const choice=opts[current];
-  if(locked)return;locked=true;
+  const now=performance.now();
+  if(lastActionId===choice.id&&now-lastActionAt<250)return;
+  lastActionId=choice.id;lastActionAt=now;
   el('stateText').textContent='NEXUS · '+choice.title;
-  try{choice.action();}finally{setTimeout(()=>locked=false,330);}
+  choice.action();
  }
  slots.forEach(btn=>btn.addEventListener('click',()=>{
   const offset=Number(btn.dataset.slot);

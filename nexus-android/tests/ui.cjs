@@ -15,7 +15,7 @@ await page.evaluate(()=>document.querySelector('.orbit-card.selected').click());
 assert.equal(await page.locator('#composer').isVisible(),true);
 await page.evaluate(()=>document.querySelector('#composer').classList.add('hidden'));
 await page.evaluate(()=>nexusReceiveQuestion('Fotografia'));
-assert.equal(await page.evaluate(()=>calls[0].command),'Fotografia');
+assert.equal(await page.evaluate(()=>calls.at(-1).command),'Fotografia');
 await page.evaluate(()=>nexusAskAI('Fotografia'));
 assert.equal(await page.evaluate(()=>calls.at(-1).message),'Fotografia');
 await page.evaluate(()=>nexusAnswer({reply:'Resposta de teste',sources:[{url:'javascript:alert(1)',title:'bad'},{url:'https://example.com',title:'Fonte'}]}));
