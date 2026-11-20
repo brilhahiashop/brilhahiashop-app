@@ -75,7 +75,7 @@ await page.evaluate(()=>nexusFailure('Sem internet'));assert.equal(await page.lo
 await page.evaluate(()=>{addCard('Segurança','<script>alert(1)</script>');nexusStopAll()});assert.equal(await page.locator('#panelContent script').count(),0);
 await page.evaluate(()=>nexusAnswer({reply:'Wrong provider',weather:{city:'Viseu',current:{temperature_2m:12,time:'2026-11-20T01:00'},daily:{}},sources:[{title:'Open-Meteo',url:'https://open-meteo.com/'}]}));assert((await page.locator('#panelContent').textContent()).includes('Open-Meteo'));assert(!(await page.locator('#panelContent').textContent()).includes('Wrong provider'));
 await page.waitForTimeout(500);
-assert.equal(await page.locator('canvas.avatar-canvas').count(),1);
+assert.equal(await page.locator('canvas.avatar-canvas').count(),0); // 3D resources must not load until requested
 assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
 assert.equal(await page.locator('#photoRig').count(),0);
 await page.locator('#closePanel').click(); // Results overlay correctly takes precedence over background HUD.
