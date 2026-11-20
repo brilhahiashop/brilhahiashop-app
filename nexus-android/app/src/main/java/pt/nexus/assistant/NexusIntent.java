@@ -10,7 +10,7 @@ final class NexusIntent {
  NexusIntent(Kind k,String a,String o){kind=k;argument=a;original=o;}
  static String norm(String s){
   return Normalizer.normalize((s==null?"":s).toLowerCase(new Locale("pt","PT")),Normalizer.Form.NFD)
-   .replaceAll("\\p{M}+","").replaceAll("[!?.,:;]"," ").replaceAll("\\s+"," ").trim();
+   .replaceAll("\\p{M}+","").replaceAll("[-!?.,:;]"," ").replaceAll("\\s+"," ").trim();
  }
  static String strip(String x){return norm(x).replaceFirst("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos|anexos)\\s*","")
   .replaceFirst("^(?:por favor\\s+)?(?:(?:podes|poderias|consegues|queria que|quero que)\\s+)?","").trim();}
