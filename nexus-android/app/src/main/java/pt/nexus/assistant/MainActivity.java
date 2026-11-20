@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
  private final Runnable continueListening=()->{if(continuous&&foreground&&!closed)listen();};
  @Override public void onCreate(Bundle state){super.onCreate(state);getSharedPreferences("privacy",0).edit().putBoolean("exited",false).apply();
   contacts=new NexusContacts(this);
-  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xff061221);root.setFitsSystemWindows(true);
+  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xff061221);root.setFitsSystemWindows(false);
   web=new WebView(this);web.setBackgroundColor(0xff061221);
   WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   web.addJavascriptInterface(new Bridge(),"NexusNative");
@@ -47,12 +47,22 @@ public class MainActivity extends Activity {
   });
   web.setWebChromeClient(new WebChromeClient(){@Override public void onPermissionRequest(PermissionRequest p){p.deny();}});
   root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
-  LinearLayout bar=new LinearLayout(this);for(String label:new String[]{"VOZ","FLUTUANTE","MENU","SAIR"}){Button b=new Button(this);b.setText(label);b.setTextSize(10);b.setTextColor(Color.WHITE);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff154366));bar.addView(b,new LinearLayout.LayoutParams(0,(int)(56*getResources().getDisplayMetrics().density),1));b.setOnClickListener(v->{switch(label){case "VOZ":listen();break;case "FLUTUANTE":bubble();break;case "MENU":menu();break;default:exit();}});}root.addView(bar);setContentView(root);
+  setContentView(root);applyFullscreen();
   if(getIntent().hasExtra("question"))pendingQuestion=getIntent().getStringExtra("question");
   if(getIntent().hasExtra("hands_free_utterance"))pendingHandsFree=getIntent().getStringExtra("hands_free_utterance");
   tts=new TextToSpeech(this,status->{ready=status==TextToSpeech.SUCCESS;if(ready){int language=tts.setLanguage(new Locale("pt","PT"));if(language<0)language=tts.setLanguage(new Locale("pt"));if(language<0)language=tts.setLanguage(Locale.getDefault());if(language<0){ready=false;toast("Não foi possível iniciar a voz. Abre MENU → Testar voz.");}else{tts.setSpeechRate(0.98f);tts.setPitch(1.04f);tts.setOnUtteranceProgressListener(new UtteranceProgressListener(){public void onStart(String id){runOnUiThread(()->js("nexusVoiceState('speaking')"));}public void onDone(String id){runOnUiThread(()->{js("nexusVoiceState('idle')");if(continuous&&foreground)voiceHandler.postDelayed(continueListening,700);});}
  public void onRangeStart(String id,int start,int end,int frame){String value=spokenText; if(start>=0&&end<=value.length()&&end>=start){String word=value.substring(start,end);runOnUiThread(()->js("window.nexusSpeechRange&&nexusSpeechRange("+JSONObject.quote(word)+")"));}}public void onError(String id){runOnUiThread(()->{js("nexusVoiceState('idle')");toast("A voz Android não conseguiu falar.");});}});greet();}}});
   web.loadUrl(ORIGIN+"/index.html");
+ }
+ private boolean fullscreen=true;
+ private void applyFullscreen(){
+  if(fullscreen){
+   getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+   getWindow().getDecorView().setSystemUiVisibility(5894);
+  }else{
+   getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+   getWindow().getDecorView().setSystemUiVisibility(0);
+  }
  }
  private void js(String code){if(web!=null&&!closed)web.evaluateJavascript(code,null);}
  private void toast(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
@@ -222,7 +232,35 @@ public class MainActivity extends Activity {
     .setPositiveButton("Abrir Acessibilidade",(d,w)->startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
     .setNegativeButton("Cancelar",null).show();
  }
- private void menu(){new AlertDialog.Builder(this).setTitle("NEXUS · 1.0.0").setItems(new String[]{"Código de acesso ao servidor","Lembretes programados","Testar voz e saudação","Diagnóstico e limitações","Recarregar interface","Apagar contexto desta sessão","Memória & Aprendizagem","Aplicações detetadas","Mãos livres · Voz em outras apps","Operador Android · Acessibilidade"},(d,w)->{if(w==0)access();else if(w==1)new AlertDialog.Builder(this).setTitle("Os meus lembretes").setMessage(ReminderManager.list(this)).setPositiveButton("OK",null).show();else if(w==2){if(ready)speak("Olá André, sou o NEXUS. A minha voz está a funcionar.");else toast("A voz Android está indisponível. Verifica a síntese de voz e o volume multimédia.");}else if(w==3)new AlertDialog.Builder(this).setTitle("Diagnóstico").setMessage("Interface: "+(loaded?"carregada localmente":"a carregar")+"\nVoz Android: "+(ready?"pronta":"indisponível")+"\nAcesso guardado: "+(!SecretStore.read(this).isEmpty()?"sim":"não")+"\n\nAvatar: modelo 3D estilizado ou ilustração. Boca aproximada, guiada pelos intervalos de fala quando disponíveis; não é lip-sync por fonemas. Gestos locais MediaPipe com câmara visível e autorização. Ao minimizar pára câmara e conversa; apenas MÃOS LIVRES previamente autorizado pode continuar com notificação. Sair encerra os serviços. Contas do negócio não estão integradas nesta versão.").setPositiveButton("OK",null).show();else if(w==4){stopMedia();loaded=false;web.reload();}else if(w==5)js("nexusClearHistory()");else if(w==6)learningMenu();else if(w==7)applicationsMenu();else if(w==8)handsFree();else if(w==9)accessibilityMenu();}).show();}
+ private void menu(){
+  String[] choices={"Voz e conversa contínua","Ativar/desativar mãos livres","Botão flutuante","Gestos holográficos por câmara",
+   "Alternar avatar 3D","Memória e aprendizagem","Lembretes e agenda","Aplicações detetadas",
+   "Operador Android · Acessibilidade","Código de acesso ao servidor","Testar voz","Ecrã inteiro / normal",
+   "Diagnóstico e limites","Recarregar interface","Apagar histórico da sessão","Sair do NEXUS"};
+  new AlertDialog.Builder(this).setTitle("NEXUS · 1.1.0").setItems(choices,(d,w)->{
+   switch(w){
+    case 0:conversation();break;
+    case 1:handsFree();break;
+    case 2:bubble();break;
+    case 3:cameraGestures();break;
+    case 4:js("document.getElementById('avatarMode').click()");break;
+    case 5:learningMenu();break;
+    case 6:new AlertDialog.Builder(this).setTitle("Lembretes").setMessage(ReminderManager.list(this)).setPositiveButton("OK",null).show();break;
+    case 7:applicationsMenu();break;
+    case 8:accessibilityMenu();break;
+    case 9:access();break;
+    case 10:if(ready)speak("Sou o NEXUS. A minha voz está operacional.");else toast("Verifica a síntese de voz e volume Android.");break;
+    case 11:fullscreen=!fullscreen;applyFullscreen();break;
+    case 12:new AlertDialog.Builder(this).setTitle("Diagnóstico NEXUS").setMessage("Interface: "+(loaded?"local e funcional":"a carregar")+
+      "\nVoz Android: "+(ready?"pronta":"indisponível")+"\nAcesso ao servidor: "+(!SecretStore.read(this).isEmpty()?"configurado":"por configurar")+
+      "\n\nO microfone e a câmara só são usados quando autorizados. Pesquisa pública pode não cobrir toda a Web. Certas operações exigem confirmação. O avatar 3D é estilizado e não reproduz expressão facial fotorrealista.")
+       .setPositiveButton("OK",null).show();break;
+    case 13:stopMedia();loaded=false;web.reload();break;
+    case 14:js("nexusClearHistory()");break;
+    case 15:exit();break;
+   }
+  }).show();
+ }
  private void access(){EditText input=new EditText(this);input.setInputType(129);input.setHint("Código privado existente do NEXUS");new AlertDialog.Builder(this).setTitle("Ligar ao servidor").setMessage("Introduz o código privado da aplicação. Não é uma chave OpenAI. Fica cifrado neste telemóvel.").setView(input).setPositiveButton("Guardar",(d,w)->{try{SecretStore.save(this,input.getText().toString().trim());toast("Código guardado. Envia uma pergunta para verificar a ligação.");}catch(Exception e){toast("Não foi possível guardar o código.");}}).setNegativeButton("Cancelar",null).show();}
  private void request(String payload){
   String token=SecretStore.read(this);
@@ -357,7 +395,7 @@ public class MainActivity extends Activity {
  private void exit(){stopMedia();closed=true;stopService(new Intent(this,ReminderSpeechService.class));getSharedPreferences("privacy",0).edit().putBoolean("exited",true).apply();stopService(new Intent(this,HandsFreeService.class));stopService(new Intent(this,BubbleService.class));if(web!=null)web.stopLoading();finishAndRemoveTask();}
  @Override protected void onPause(){foreground=false;HandsFreeService.setAppVisible(false);stopMedia();if(web!=null)web.onPause();super.onPause();}
  @Override protected void onResume(){
-  super.onResume();foreground=true;
+  super.onResume();foreground=true;applyFullscreen();
   HandsFreeService.setAppVisible(true);
   ReminderManager.scheduleAll(this);
   if(web!=null)web.onResume();
