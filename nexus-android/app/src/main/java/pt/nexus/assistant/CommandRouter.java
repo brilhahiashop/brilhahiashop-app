@@ -26,7 +26,7 @@ public final class CommandRouter {
         String raw = spoken == null ? "" : spoken.trim();
         String q = plain(raw).replaceFirst("^(ola\\s+)?(nexus|nexos)[,!: ]*", "").trim();
         if (q.length() == 0) return "Não ouvi nenhum comando.";
-        if(q.matches("^(sair do nexus|fecha o nexus|fechar nexus|sair do nexos)$")){a.stopService(new Intent(a,BubbleService.class));a.finishAndRemoveTask();return "NEXUS encerrado.";}
+        if(q.matches("^(sair do nexus|fecha o nexus|fechar nexus|sair do nexos)$")){a.stopService(new Intent(a,BubbleService.class));a.stopService(new Intent(a,HandsFreeService.class));a.stopService(new Intent(a,ReminderSpeechService.class));a.finishAndRemoveTask();return "NEXUS encerrado.";}
         // "fecha o Facebook e abre o Instagram": switches apps; Android keeps the first in memory.
         if(q.matches("^(fecha|fechar|sair|minimiza)\\s+.*\\s+e\\s+(abre|abrir|inicia|iniciar|lanca)\\s+.*")) {
             String target=q.replaceFirst("^.*\\s+e\\s+(abre|abrir|inicia|iniciar|lanca)\\s+", "").trim()
@@ -71,22 +71,12 @@ public final class CommandRouter {
         return "Vou enviar a pergunta ao NEXUS.";
     }
     /** Canonical names and common speech aliases, entirely local. */
-    static String appName(String term){
-        String s=plain(term).replaceFirst("^(o|a|meu|minha|uma|um|app|aplicacao)\\s+","").trim();
-        if(s.matches("(face|face book|fb|facebook)"))return "facebook";
-        if(s.matches("(insta|instagr[aã]m|instagram)"))return "instagram";
-        if(s.matches("(watsap|whats|whatsapp|what's app|zap)"))return "whatsapp";
-        if(s.matches("(yt|you tube|youtube)"))return "youtube";
-        if(s.matches("(tik tok|tiktok)"))return "tiktok";
-        if(s.matches("(google maps|mapas|maps)"))return "maps";
-        if(s.matches("(google chrome|chrome|navegador)"))return "chrome";
-        if(s.matches("(correio|email|e-mail|gmail)"))return "gmail";
-        return s;
-    }
+    static String appName(String term){return CommandText.app(term);}
     static String[] knownPackages(String canonical){
         switch(canonical){
           case "facebook":return new String[]{"com.facebook.katana","com.facebook.lite"};
           case "instagram":return new String[]{"com.instagram.android","com.instagram.lite"};
+          case "whatsapp business":return new String[]{"com.whatsapp.w4b"};
           case "whatsapp":return new String[]{"com.whatsapp","com.whatsapp.w4b"};
           case "youtube":return new String[]{"com.google.android.youtube"};
           case "spotify":return new String[]{"com.spotify.music"};

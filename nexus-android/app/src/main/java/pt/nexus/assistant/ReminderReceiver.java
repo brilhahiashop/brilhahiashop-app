@@ -36,7 +36,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
   AudioManager audio=(AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
   boolean soundOn=audio!=null&&audio.getRingerMode()==AudioManager.RINGER_MODE_NORMAL&&audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION)>0;
   boolean dnd=nm.getCurrentInterruptionFilter()!=NotificationManager.INTERRUPTION_FILTER_ALL;
-  if(soundOn&&!dnd){
+  if(soundOn&&!dnd&&!context.getSharedPreferences("privacy",0).getBoolean("exited",false)){
    try{
     Intent talk=new Intent(context,ReminderSpeechService.class).putExtra("title",title).putExtra("id",id);
     if(Build.VERSION.SDK_INT>=26)context.startForegroundService(talk);else context.startService(talk);

@@ -8,8 +8,8 @@ android {
         applicationId 'pt.nexus.assistant'
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName '0.6.1'
+        versionCode 11
+        versionName '0.7.0'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -19,3 +19,5 @@ android {
 }
 android { defaultConfig { testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner' } }
 dependencies { androidTestImplementation 'androidx.test:runner:1.6.2'; androidTestImplementation 'androidx.test.ext:junit:1.2.1' }
+
+dependencies { implementation "com.google.mediapipe:tasks-vision:0.10.21"; testImplementation "junit:junit:4.13.2" }

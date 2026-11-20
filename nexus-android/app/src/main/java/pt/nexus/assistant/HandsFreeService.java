@@ -95,7 +95,7 @@ public final class HandsFreeService extends Service {
  }
  private void setVisible(boolean visible){
   appVisible=visible;
-  if(visible){ui.removeCallbacks(restart);releaseRecognizer();update("Em pausa enquanto o NEXUS está aberto.");}
+  if(visible){ui.removeCallbacks(restart);if(tts!=null)tts.stop();speaking=false;releaseRecognizer();update("Em pausa enquanto o NEXUS está aberto.");}
   else if(running)listenLater(700);
  }
  private void listenLater(long delay){
@@ -159,7 +159,7 @@ public final class HandsFreeService extends Service {
     tell("Modo mãos-livres desligado.",true);return;
   }
   if(q.matches(".*\\b(sair do nexus|fecha o nexus|desliga o nexus)\\b.*")){
-    stopService(new Intent(this,BubbleService.class));tell("NEXUS encerrado.",true);return;
+    stopService(new Intent(this,BubbleService.class));stopService(new Intent(this,ReminderSpeechService.class));tell("NEXUS encerrado.",true);return;
   }
   if(q.matches("^(volta|regressa|mostra|abre|muda para|ir para|vai para)\\s+(ao?\\s+|para\\s+)?(nexus|assistente|nexos)$")){
     boolean ok=openNexus(null);if(ok)tell("Voltei ao NEXUS.",false);else tell("Não consegui abrir o NEXUS. Usa o botão flutuante.",false);
@@ -184,23 +184,15 @@ public final class HandsFreeService extends Service {
   if(openNexus(speech)){update("A continuar conversa no NEXUS.");}
   else tell("Não consegui voltar ao NEXUS. Toca na esfera flutuante.",false);
  }
- static String requestedApp(String q){
-  q=CommandRouter.plain(q).replaceAll("[?!.,:;]"," ").replaceAll("\\s+"," ").trim();
-  if(!q.matches(".*\\b(abre|abrir|abres|abrimos|abririas|entra|entrar|muda|vai|ir|inicia|lanca|lancar|arranca)\\b.*"))return null;
-  if(q.matches(".*\\b(instala|instalar|desinstala|desinstalar|conta|registo|codigo|password|senha)\\b.*"))return null;
-  String target=q.replaceFirst("^.*?\\b(?:abre|abrir|abres|abririas|entra(?:r)?|muda(?:r)?(?:\\s+para)?|vai(?:\\s+para)?|ir(?:\\s+para)?|inicia(?:r)?|lanca(?:r)?|arranca(?:r)?)\\b\\s*","");
-  target=target.replaceFirst("^(?:(?:o|a|meu|minha|para|no|na|app|aplicacao)\\s+)+","");
-  target=target.replaceFirst("\\s+(?:por favor|se faz favor|agora|ja)$","").trim();
-  if(target.isEmpty()||target.length()>60)return null;
-  String known=CommandRouter.appName(target);
-  return known.isEmpty()?null:known;
- }
+ static String requestedApp(String q){return CommandText.requestedApp(q);}
  private boolean startActivitySafe(Intent i){
   i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
   try{startActivity(i);return true;}catch(Exception ignored){return false;}
  }
  private boolean launchApp(String target){
   String name=CommandRouter.appName(target);
+  if(name.equals("definicoes")||name.equals("configuracoes"))return startActivitySafe(new Intent(Settings.ACTION_SETTINGS));
+  if(name.equals("camara")||name.equals("camera"))return startActivitySafe(new Intent("android.media.action.IMAGE_CAPTURE"));
   PackageManager pm=getPackageManager();
   for(String pkg:CommandRouter.knownPackages(name))if(launchPackage(pm,pkg))return true;
   Intent query=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);

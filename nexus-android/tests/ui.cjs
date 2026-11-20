@@ -1,6 +1,6 @@
 const { chromium }=require('playwright');
 const fs=require('fs'),path=require('path'),assert=require('assert');
-(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/usr/bin/chromium',args:['--no-sandbox']});const page=await browser.newPage({viewport:{width:393,height:780}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/usr/bin/chromium',args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:393,height:780}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.route('https://appassets.androidplatform.net/**',route=>{const name=new URL(route.request().url()).pathname.slice(1);const file=path.join(__dirname,'../app/src/main/assets/nexus',name);route.fulfill({path:file,contentType:name.endsWith('.js')?'application/javascript':name.endsWith('.css')?'text/css':name.endsWith('.webp')?'image/webp':'text/html'});});
 await page.addInitScript(()=>{window.calls=[];window.NexusNative={ask:p=>calls.push(JSON.parse(p)),speak:t=>calls.push({spoken:t}),listen:()=>calls.push('listen'),command:t=>calls.push({command:t}),handsFree:()=>calls.push("handsFree"),handsFreeActive:()=>false,stop:()=>{},menu:()=>{}}});
 await page.goto('https://appassets.androidplatform.net/index.html');await page.waitForFunction(()=>document.querySelector('.avatar').naturalWidth>0);await page.evaluate(()=>nexusReceiveQuestion('Fotografia'));assert.equal(await page.evaluate(()=>calls[0].message),'Fotografia');
@@ -31,4 +31,11 @@ assert((await page.locator('#panelContent').textContent()).includes('Olá André
 await page.evaluate(()=>nexusFailure('Sem internet'));assert.equal(await page.locator('#notice').textContent(),'Sem internet');
 await page.evaluate(()=>{addCard('Segurança','<script>alert(1)</script>');nexusStopAll()});assert.equal(await page.locator('#panelContent script').count(),0);
 await page.evaluate(()=>nexusAnswer({reply:'Wrong provider',weather:{city:'Viseu',current:{temperature_2m:12,time:'2026-11-20T01:00'},daily:{}},sources:[{title:'Open-Meteo',url:'https://open-meteo.com/'}]}));assert((await page.locator('#panelContent').textContent()).includes('Open-Meteo'));assert(!(await page.locator('#panelContent').textContent()).includes('Wrong provider'));
+await page.waitForTimeout(500);
+assert.equal(await page.locator('canvas.avatar-canvas').count(),1);
+assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),true);
+await page.locator('#avatarMode').click();assert.equal(await page.locator('#avatarWrap').evaluate(e=>e.classList.contains('model-ready')),false);
+await page.locator('#avatarMode').click();await page.evaluate(()=>{nexusAvatarState('speaking');nexusSpeechRange('Olá');nexusGesture('select');nexusGesture('confirm');nexusConversationState(true)});
+assert.equal(await page.locator('#conversationBtn').getAttribute('aria-pressed'),'true');
+await page.evaluate(()=>{nexusGesture('stopped');nexusConversationState(false);nexusAvatarState('idle');document.querySelector('#panel').classList.add('hidden')});
 await page.waitForTimeout(500);await page.screenshot({path:'/tmp/nexus-mobile.png',fullPage:true});assert.deepEqual(errors,[]);console.log('PASS: holographic UI, app commands, teaching trigger, learned-step routing, voice regression, weather and failure recovery');await browser.close();})();

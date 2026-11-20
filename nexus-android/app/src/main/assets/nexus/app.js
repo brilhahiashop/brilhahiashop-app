@@ -2,7 +2,7 @@
 const $=s=>document.querySelector(s), avatarWrap=$('#avatarWrap'),stateText=$('#stateText'),panel=$('#panel'),notice=$('#notice');
 let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false;
 const native=window.NexusNative, labels={idle:'TOCA PARA FALAR',thinking:'A PENSAR',speaking:'A RESPONDER',listening:'ESTOU A OUVIR'};
-function setState(value){state=value;avatarWrap.className='avatar-wrap state-'+value;stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
+function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(value);state=value;avatarWrap.className='avatar-wrap state-'+value;stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
 window.nexusVoiceState=setState;
 window.nexusGreeting=text=>{notice.textContent=text;};
 window.nexusFeedback=text=>{notice.textContent=text;};
@@ -20,17 +20,18 @@ function rotate(direction){if(!cards.length)return;position=(position+direction+
 function classify(q){const topics=[['Meteorologia',/tempo|chuva|meteorolog|temperatura/i],['Notícias',/not[ií]cia|atualidade/i],['Negócios',/neg[oó]cio|brilhah|loja|venda/i],['Redes sociais',/instagram|facebook|redes|tiktok/i],['Ciência',/ci[eê]ncia|espa[cç]o|universo/i],['Tecnologia',/tecnolog|programa|computador/i],['Música',/m[uú]sica|beat|guitarra/i],['Fotografia',/fotograf|c[aâ]mara|evento/i]];return (topics.find(t=>t[1].test(q))||['Conversa'])[0];}
 function isLocalInstruction(q){
  const s=q.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/^(ola\s+)?(nexus|nexos)[,!: -]*/,'').trim();
- return learningMode||/^(abre|abrir|inicia|iniciar|lanca|fecha|fechar|sair|minimiza|volta|regressa|entra no|entra na|executa|lembra.me|lembrete|avisa.me|recorda.me|agenda|agendar|compromisso|marca|marcar|apresenta.te|apresenta te|quem es|fala.me de ti|diz.me quem es|pesquisa|pesquisar|procura|quero ensinar|vou ensinar|vamos ensinar|modo aprendizagem|aprende|guarda|grava|memoriza|mostra rotinas|lista rotinas|apaga rotina|proximo passo|seguinte passo|continuar rotina|repete rotina|faz rotina)\b/.test(s);
+ return learningMode||/^(?:(?:por favor\s+)?(?:podes|poderias|consegues)\s+)?(?:abre|abrir|entra|muda para|vai para)\b/.test(s)||/^(abre|abrir|inicia|iniciar|lanca|fecha|fechar|sair|minimiza|volta|regressa|entra no|entra na|executa|lembra.me|lembrete|avisa.me|recorda.me|agenda|agendar|compromisso|marca|marcar|apresenta.te|apresenta te|quem es|fala.me de ti|diz.me quem es|pesquisa|pesquisar|procura|quero ensinar|vou ensinar|vamos ensinar|modo aprendizagem|aprende|guarda|grava|memoriza|mostra rotinas|lista rotinas|apaga rotina|proximo passo|seguinte passo|continuar rotina|repete rotina|faz rotina)\b/.test(s);
 }
-function ask(question){
+function ask(question,forceAI=false){
  const q=String(question||'').trim().slice(0,4000);
  if(!q||pendingRequest)return;
  if(!native){nexusFailure('Abre a aplicação Android para utilizar a voz e a ligação segura.');return;}
- if(isLocalInstruction(q)&&native.command){notice.textContent='Comando recebido: '+q;native.command(q);return;}
+ if(!forceAI&&isLocalInstruction(q)&&native.command){notice.textContent='Comando recebido: '+q;native.command(q);return;}
  native.stop();pendingRequest=true;pending=q;setState('thinking');notice.textContent='A consultar a IA…';
  native.ask(JSON.stringify({message:q,search:true,history:memory.slice(-8)}));
 }
 window.nexusReceiveQuestion=ask;
+window.nexusAskAI=q=>ask(q,true);
 function weatherReply(weather){
  if(!weather||!weather.current||!Number.isFinite(weather.current.temperature_2m))return null;
  const number=value=>Number.isFinite(value)?value.toLocaleString('pt-PT'):'—';
@@ -64,3 +65,8 @@ let startX=0,startY=0;panel.addEventListener('touchstart',e=>{startX=e.touches[0
 window.addEventListener('error',()=>{notice.textContent='Ocorreu um erro na interface. Usa MENU → Recarregar interface.';});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)nexusStopAll();});
 setState('idle');
+
+window.nexusConversationState=active=>{$('#conversationBtn').setAttribute('aria-pressed',active?'true':'false');$('#conversationBtn').textContent=active?'CONVERSA ATIVA':'CONVERSA';};
+$('#conversationBtn').onclick=()=>native&&native.conversation&&native.conversation();
+$('#gestureBtn').onclick=()=>native&&native.gestures&&native.gestures();
+window.nexusGesture=event=>{if(event==='next')rotate(1);else if(event==='previous')rotate(-1);else if(event==='select'){panel.classList.add('gesture-selected');notice.textContent='Painel selecionado. Mostra o polegar para confirmar.';}else if(event==='confirm'){panel.classList.remove('gesture-selected');if(position>=0){panel.classList.remove('hidden');notice.textContent='Painel confirmado: '+cards[position].title;}}else if(event==='started'){$('#gestureBtn').textContent='PARAR CÂMARA';}else{$('#gestureBtn').textContent='GESTOS';panel.classList.remove('gesture-selected');notice.textContent=event==='unavailable'?'Não foi possível iniciar a câmara ou reconhecer a mão.':'Câmara desligada.';}};
