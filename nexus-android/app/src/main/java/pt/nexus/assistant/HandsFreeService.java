@@ -149,7 +149,7 @@ public final class HandsFreeService extends Service {
  static String commandAfterWakeWord(String speech){
   String q=CommandRouter.plain(speech==null?"":speech).replaceAll("[?!.,:;]"," ").replaceAll("\\s+"," ").trim();
   // Prevent TV/music/conversations from triggering unintended actions.
-  Matcher m=Pattern.compile("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos|nexus assistente)\\b\\s*(.*)$").matcher(q);
+  Matcher m=Pattern.compile("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos|anexos|nexus assistente)\\b\\s*(.*)$").matcher(q);
   return m.matches()?m.group(1).trim():null;
  }
  private void process(String speech){
