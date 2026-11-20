@@ -1,14 +1,15 @@
 'use strict';
 const $=s=>document.querySelector(s), avatarWrap=$('#avatarWrap'),stateText=$('#stateText'),panel=$('#panel'),notice=$('#notice');
-let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false;
+let state='idle',memory=[],cards=[],position=-1,pending='',speaking=false,pendingRequest=false,learningMode=false,lastNativeCommand='';
 const native=window.NexusNative, labels={idle:'TOCA PARA FALAR',thinking:'A PENSAR',speaking:'A RESPONDER',listening:'ESTOU A OUVIR'};
 function setState(value){if(window.nexusAvatarState)window.nexusAvatarState(value);state=value;avatarWrap.classList.remove('state-idle','state-thinking','state-speaking','state-listening');avatarWrap.classList.add('state-'+value);stateText.textContent=labels[value]||labels.idle;speaking=value==='speaking';}
 window.nexusVoiceState=setState;
 window.nexusGreeting=text=>{notice.textContent=text;};
 window.nexusFeedback=text=>{notice.textContent=text;};
-window.nexusHeard=text=>{notice.textContent='Ouvi: '+text;};
+window.nexusHeard=text=>{lastNativeCommand=text;notice.textContent='Ouvi: '+text;};
 window.nexusLocalAnswer=(title,reply)=>{
   pendingRequest=false;
+  if(lastNativeCommand){memory.push({role:'user',content:lastNativeCommand},{role:'assistant',content:reply});memory=memory.slice(-16);lastNativeCommand='';}
   if(/Modo Aprendizagem ativo/.test(reply))learningMode=true;
   if(/Guardei a rotina|Cancelei o ensino/.test(reply))learningMode=false;
   addCard(title,reply);setState('idle');notice.textContent='';
@@ -26,9 +27,9 @@ function ask(question,forceAI=false){
  const q=String(question||'').trim().slice(0,4000);
  if(!q||pendingRequest)return;
  if(!native){nexusFailure('Abre a aplicação Android para utilizar a voz e a ligação segura.');return;}
- if(!forceAI&&isLocalInstruction(q)&&native.command){notice.textContent='Comando recebido: '+q;native.command(q);return;}
+ if(!forceAI&&native.command){lastNativeCommand=q;notice.textContent='NEXUS a interpretar: '+q;native.command(q);return;}
  native.stop();pendingRequest=true;pending=q;setState('thinking');notice.textContent='A consultar a IA…';
- native.ask(JSON.stringify({message:q,search:true,history:memory.slice(-8)}));
+ native.ask(JSON.stringify({message:q,search:true,history:memory.slice(-16)}));
 }
 window.nexusReceiveQuestion=ask;
 window.nexusAskAI=q=>ask(q,true);
@@ -40,9 +41,9 @@ function weatherReply(weather){
  (d.time||[]).slice(0,4).forEach((day,i)=>{text+='\n\n'+String(day)+': mínima '+number((d.temperature_2m_min||[])[i])+' °C · máxima '+number((d.temperature_2m_max||[])[i])+' °C · probabilidade de precipitação '+number((d.precipitation_probability_max||[])[i])+'%.';});
  return text+'\n\nFonte: Open-Meteo, indicada pelo servidor. A previsão pode mudar.';
 }
-window.nexusAnswer=data=>{pendingRequest=false;const weather=weatherReply(data.weather);const reply=weather||data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=weather?'Meteorologia · '+String(data.weather.city||'Previsão'):typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);addCard(title,reply,data.sources||[]);memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-8);notice.textContent='';$('.health').textContent='● SERVIDOR RESPONDEU';setState('idle');native.speak(reply);};
+window.nexusAnswer=data=>{pendingRequest=false;const weather=weatherReply(data.weather);const reply=weather||data.reply||data.answer;if(typeof reply!=='string'||!reply.trim()){nexusFailure('O servidor devolveu uma resposta sem texto.');return;}const title=weather?'Meteorologia · '+String(data.weather.city||'Previsão'):typeof data.topic==='string'?data.topic:(data.topic&&data.topic.title)||classify(pending);addCard(title,reply,data.sources||[]);memory.push({role:'user',content:pending},{role:'assistant',content:reply});memory=memory.slice(-16);notice.textContent='';$('.health').textContent='● SERVIDOR RESPONDEU';setState('idle');native.speak(reply);};
 window.nexusFailure=error=>{pendingRequest=false;setState('idle');notice.textContent=error;$('.health').textContent='● VERIFICAR LIGAÇÃO';};
-window.nexusClearHistory=()=>{memory=[];cards=[];position=-1;panel.classList.add('hidden');notice.textContent='Contexto desta sessão apagado.';};
+window.nexusClearHistory=()=>{memory=[];lastNativeCommand='';cards=[];position=-1;panel.classList.add('hidden');notice.textContent='Contexto desta sessão apagado.';};
 window.nexusStopAll=()=>{if(native)native.stop();pendingRequest=false;pending='';setState('idle');notice.textContent='';};
 function talk(){if(!native){nexusFailure('Voz disponível na aplicação Android.');return;}if(speaking){native.stop();setState('idle');return;}native.listen();}
 $('#learnBtn').onclick=()=>{if(native&&native.command)native.command('NEXUS, vou ensinar-te uma rotina');else notice.textContent='Modo aprendizagem disponível no Android.';};

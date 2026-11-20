@@ -14,7 +14,17 @@ import java.util.concurrent.*;
 public class LocalInterfaceTest {
  private WebView find(View v){if(v instanceof WebView)return (WebView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){WebView w=find(g.getChildAt(i));if(w!=null)return w;}}return null;}
  private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(5,TimeUnit.SECONDS);}
- @Test public void optInOperatorGrammar(){
+ @Test public void naturalDeviceAndSearchIntents(){
+  assertEquals(NexusIntent.Kind.RESEARCH,NexusIntent.parse("Pesquisa receitas no Google e apresenta resultados").kind);
+  assertEquals(NexusIntent.Kind.BROWSER_SEARCH,NexusIntent.parse("Abre o Google e pesquisa receitas").kind);
+  assertEquals(NexusIntent.Kind.CALL,NexusIntent.parse("NEXUS, liga ao meu filho").kind);
+  assertEquals(NexusIntent.Kind.MESSAGE,NexusIntent.parse("Envia mensagem ao meu filho a dizer que chego às seis").kind);
+  assertEquals(NexusIntent.Kind.ALARM,NexusIntent.parse("Desperta-me amanhã às seis").kind);
+  assertEquals(NexusIntent.Kind.APP,NexusIntent.parse("NEXUS abre o Facebook").kind);
+  assertEquals(2,NexusIntent.splitActions("NEXUS abre o Facebook e depois liga ao meu filho").size());
+  assertEquals(1,NexusIntent.splitActions("Quero saber mais sobre trabalho e depois de estudar").size());
+ }
+  @Test public void optInOperatorGrammar(){
    assertTrue(NexusAccessibilityService.handles("NEXUS, volta atrás"));
    assertTrue(NexusAccessibilityService.handles("NEXUS, desce"));
    assertTrue(NexusAccessibilityService.handles("NEXUS, toca em pesquisar"));

@@ -172,16 +172,26 @@ public final class HandsFreeService extends Service {
   if(NexusAccessibilityService.handles(q)){
     tell(NexusAccessibilityService.perform(q),false);return;
   }
+  NexusIntent natural=NexusIntent.parse(speech);
+  if(natural.kind==NexusIntent.Kind.CALL||natural.kind==NexusIntent.Kind.MESSAGE
+     ||natural.kind==NexusIntent.Kind.ALARM||natural.kind==NexusIntent.Kind.TIMER
+     ||natural.kind==NexusIntent.Kind.RESEARCH){
+    if(openNexus(speech))update("A tratar do pedido na assistente.");
+    else tell("Não consegui abrir o NEXUS para concluir o pedido.",false);
+    return;
+  }
+  if(natural.kind==NexusIntent.Kind.BROWSER_SEARCH){
+    String query=q.replaceFirst("^.*?(?:pesquisa|procura|pesquisar)\\s+","")
+     .replaceFirst("^(por|sobre|no google|por favor)\\s+","");
+    boolean ok=startActivitySafe(new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(query))));
+    tell(ok?"Abri a pesquisa no Google.":"Não consegui abrir a pesquisa.",false);
+    return;
+  }
   String target=requestedApp(q);
   if(target!=null){
     boolean ok=launchApp(target);
     tell(ok?"A abrir "+target+".":"Não consegui abrir "+target+". Podes usar o botão flutuante.",false);
     return;
-  }
-  if(q.matches("^(pesquisa|pesquisar|procura|procura por|pesquisa por)\\s+.+")){
-    String query=q.replaceFirst("^(pesquisa|pesquisar|procura)\\s+(?:por\\s+)?","");
-    boolean ok=startActivitySafe(new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(query))));
-    tell(ok?"A pesquisar "+query+".":"Não consegui iniciar a pesquisa.",false);return;
   }
   // Everything else is handed to the visible native NEXUS app for AI/reminders/teaching.
   if(openNexus(speech)){update("A continuar conversa no NEXUS.");}

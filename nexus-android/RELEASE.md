@@ -1,19 +1,22 @@
-# NEXUS Android 0.8.0
+# NEXUS Android 0.9.0 — Núcleo de ações e pesquisa
 
-## Preservado de versões anteriores
-- Aplicação local com holograma, conversa por voz, IA Vercel, pesquisa, lembretes, Mãos Livres opt-in, aprendizagem de rotinas.
-- Avatar 3D estilizado em Three.js (opcional) e reconhecimento de gestos via MediaPipe com câmara frontal visível e autorização.
-- Botão flutuante, abertura de aplicações, variantes de voz do WhatsApp.
+## Melhorias do cérebro
+- Unificação da entrada por voz e teclado: os dois passam pelo mesmo classificador local de intenções, com encaminhamento para a IA quando não se trata de comando local.
+- Pesquisa online a pedido: tenta obter resultados públicos atuais em RSS (Bing/Google Notícias), Wikipedia e receitas (TheMealDB), quando disponível; envia resumos de fontes verificáveis ao servidor de IA e mantém links no painel. Quando nenhuma fonte está acessível, não inventa resultados.
+- Distingue «abre o Google e pesquisa X» (abre navegador) de «pesquisa X e explica-me» (consulta fontes e responde na aplicação).
+- Compreensão de pedidos diretos para abrir aplicações, enviar mensagens (preparação), telefonar e criar despertadores/temporizadores no relógio Android.
+- Chamadas: escolhe o contacto associado ao nome/apelido uma vez pelo seletor Android; guarda localmente o número cifrado; pede confirmação para iniciar a chamada; depois pede permissão de telefone ou abre o marcador.
+- Mensagens: prepara mensagens na aplicação SMS do telemóvel, com confirmação no envio. Não envia automaticamente WhatsApp ou SMS.
+- Alarme/despertador: usa a app Relógio pelo intent oficial e pede confirmação nesse ecrã.
+- Comandos encadeados separados por «e depois» podem ser continuados explicitamente por «NEXUS, continua».
+- Memória de contexto durante a sessão ampliada de 8 para 16 entradas, incluindo respostas de ações locais. A voz foi ajustada para eliminar leituras de URLs e marcação Markdown.
 
-## Novo nesta versão
-1. **Modo rosto realista:** imagem holográfica de alta definição com animação local de lábios alinhada com o início/fim da fala e, quando existirem, intervalos de TTS. Transições de profundidade e modo alternativo 3D. Não é um modelo facial fotorealista 3D com fonemas certificados.
-2. **Operador Android opcional:** serviço de Acessibilidade com permissão explícita nas Definições. Comandos: "NEXUS, volta atrás", "NEXUS, desce", "NEXUS, toca em pesquisar" e "NEXUS, escreve olá" (sem enviar).
-3. **Interface funcional:** os painéis laterais do holograma tornam-se botões reais para aplicações e lembretes. Botão OPERADOR abre instruções de autorização. Painel flutuante simplificado com ações reais.
-4. **Privacidade:** ações locais e por iniciativa do utilizador, sem persistir conteúdo dos ecrãs. Não são automatizados envios de mensagens, compras, transferências, eliminações ou aceitação de permissões.
+## Preservado
+- Holograma visual com boca animada e 3D alternativo; mãos-livres; comandos de aplicações; serviço de Acessibilidade opcional; aprendizagem de rotinas; lembretes; gestos por câmara e botão flutuante.
 
-## Limitações e testes
-- Acessibilidade pode não conseguir interagir com alguns ecrãs protegidos ou interfaces específicas; só funciona após ativação voluntária.
-- A animação de lábios é aproximada, não reconstrução facial 3D por fonemas.
-- A escuta no segundo plano permanece dependente das restrições Android e do motor de voz.
-- Verificar manualmente no equipamento: whatsapp, voz, fotos, opções de acessibilidade e restrições de bateria.
-- As permissões da câmara e microfone não são necessárias para abrir a aplicação; pedidas quando a função é ativada.
+## Limites conhecidos
+- Não é possível garantir controlo irrestrito de todas as apps. Acessibilidade pode falhar em interfaces protegidas.
+- A pesquisa usa fontes públicas gratuitas, sujeitas a falha, alteração ou indisponibilidade. Não é a pesquisa integral do Google; fontes atuais só são citadas quando recuperadas.
+- O NEXUS nunca lê contactos sem seleção voluntária, não coloca chamadas sem confirmação e não envia mensagens nem efetua compras autonomamente.
+- A voz final depende do motor TTS instalado no Android. Não existe conversação humana perfeita nem animação facial 3D por fonemas.
+- Testar fisicamente comandos, permissões, pesquisa, contactos, alarmes e modo mãos-livres antes de confiar em tarefas essenciais.

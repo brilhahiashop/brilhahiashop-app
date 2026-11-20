@@ -40,9 +40,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.8.0.apk
-          sha256sum NEXUS-Android-v0.8.0.apk > SHA256SUMS.txt
-          gh release create nexus-android-v0.8.0 NEXUS-Android-v0.8.0.apk SHA256SUMS.txt --target "$GITHUB_SHA" --prerelease --title "NEXUS Android 0.8.0 — rosto animado, operador Android e painel funcional" --notes-file nexus-android/RELEASE.md
+          cp nexus-android/app/build/outputs/apk/debug/app-debug.apk NEXUS-Android-v0.9.0.apk
+          sha256sum NEXUS-Android-v0.9.0.apk > SHA256SUMS.txt
+          gh release create nexus-android-v0.9.0 NEXUS-Android-v0.9.0.apk SHA256SUMS.txt --target "$GITHUB_SHA" --prerelease --title "NEXUS Android 0.9.0 — interpretação natural, pesquisa, chamadas e alarmes" --notes-file nexus-android/RELEASE.md
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
