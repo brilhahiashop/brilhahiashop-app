@@ -46,7 +46,7 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          target: default
+          target: google_apis
           disable-animations: true
           ram-size: 2048M
           cores: 2
