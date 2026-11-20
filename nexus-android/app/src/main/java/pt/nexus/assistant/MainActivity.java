@@ -17,7 +17,7 @@ import org.json.*;
 /** Only bundled trusted documents can access the native bridge. No remote pages in this WebView. */
 public class MainActivity extends Activity {
  private static final String ORIGIN="https://appassets.androidplatform.net";
- private WebView web; private TextToSpeech tts; private boolean ready=false,foreground=false,closed=false,loaded=false,greeted=false;
+ private WebView web; private TextToSpeech tts; private boolean ready=false,foreground=false,closed=false,loaded=false,greeted=false,greetingShown=false;
  private String pendingQuestion; private String pendingHandsFree; private int generation=0; private volatile HttpsURLConnection connection;
  private ExecutorService worker=Executors.newSingleThreadExecutor();
  private LinearLayout root; private SpeechCapture capture; private NexusContacts contacts;
@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
     }catch(Exception e){return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",null,new ByteArrayInputStream(new byte[0]));}
    }
    @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest req){Uri u=req.getUrl();if("https".equals(u.getScheme()))try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception ignored){}return true;}
-   @Override public void onPageFinished(WebView v,String url){if(!url.equals(ORIGIN+"/index.html"))return;loaded=true;greet();if(pendingQuestion!=null){String q=pendingQuestion;pendingQuestion=null;js("nexusReceiveQuestion("+JSONObject.quote(q)+")");}
+   @Override public void onPageFinished(WebView v,String url){if(!url.equals(ORIGIN+"/index.html"))return;loaded=true;js("window.nexusBoot&&nexusBoot()");greet();if(pendingQuestion!=null){String q=pendingQuestion;pendingQuestion=null;js("nexusReceiveQuestion("+JSONObject.quote(q)+")");}
     dispatchHandsFreeIfReady();}
    @Override public void onReceivedError(WebView v,WebResourceRequest req,WebResourceError error){if(req.isForMainFrame())runOnUiThread(()->new AlertDialog.Builder(MainActivity.this).setTitle("Recuperar interface").setMessage("Não foi possível carregar os ficheiros locais.").setPositiveButton("Recarregar",(d,w)->web.loadUrl(ORIGIN+"/index.html")).setNegativeButton("Sair",(d,w)->exit()).show());}
    @Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail){root.removeView(v);v.destroy();web=null;recreate();return true;}
@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
   if(getIntent().hasExtra("question"))pendingQuestion=getIntent().getStringExtra("question");
   if(getIntent().hasExtra("hands_free_utterance"))pendingHandsFree=getIntent().getStringExtra("hands_free_utterance");
   tts=new TextToSpeech(this,status->{ready=status==TextToSpeech.SUCCESS;if(ready){int language=tts.setLanguage(new Locale("pt","PT"));if(language<0)language=tts.setLanguage(new Locale("pt"));if(language<0)language=tts.setLanguage(Locale.getDefault());if(language<0){ready=false;toast("Não foi possível iniciar a voz. Abre MENU → Testar voz.");}else{tts.setSpeechRate(0.98f);tts.setPitch(1.04f);tts.setOnUtteranceProgressListener(new UtteranceProgressListener(){public void onStart(String id){runOnUiThread(()->js("nexusVoiceState('speaking')"));}public void onDone(String id){runOnUiThread(()->{js("nexusVoiceState('idle')");if(continuous&&foreground)voiceHandler.postDelayed(continueListening,700);});}
- public void onRangeStart(String id,int start,int end,int frame){String value=spokenText; if(start>=0&&end<=value.length()&&end>=start){String word=value.substring(start,end);runOnUiThread(()->js("window.nexusSpeechRange&&nexusSpeechRange("+JSONObject.quote(word)+")"));}}public void onError(String id){runOnUiThread(()->{js("nexusVoiceState('idle')");toast("A voz Android não conseguiu falar.");});}});greet();}}});
+ public void onRangeStart(String id,int start,int end,int frame){String value=spokenText; if(start>=0&&end<=value.length()&&end>=start){String word=value.substring(start,end);runOnUiThread(()->js("window.nexusSpeechRange&&nexusSpeechRange("+JSONObject.quote(word)+")");js("window.nexusSpeechProgress&&nexusSpeechProgress("+start+","+end+")"));}}public void onError(String id){runOnUiThread(()->{js("nexusVoiceState('idle')");toast("A voz Android não conseguiu falar.");});}});greet();}}});
   web.loadUrl(ORIGIN+"/index.html");
  }
  private boolean fullscreen=true;
@@ -67,13 +67,21 @@ public class MainActivity extends Activity {
  private void js(String code){if(web!=null&&!closed)web.evaluateJavascript(code,null);}
  private void toast(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
  private void greet(){
-  if(!loaded||!foreground||greeted||pendingQuestion!=null)return;
-  js("nexusGreeting("+JSONObject.quote("Olá André! Sou o NEXUS. Estou aqui para te ajudar no trabalho, no lazer ou no que precisares.")+")");
-  if(ready){greeted=true;speak("Olá André, como estás? Sou o NEXUS. Em que posso ajudar?");}
+  if(!loaded||!foreground||closed||pendingQuestion!=null)return;
+  if(!greetingShown){
+   greetingShown=true;
+   js("window.nexusGreeting&&nexusGreeting("+JSONObject.quote("Olá André. Sou o NEXUS. Em que posso ajudar?")+")");
+  }
+  if(ready&&!greeted){
+   greeted=true;
+   voiceHandler.postDelayed(()->{
+    if(foreground&&!closed&&!continuous)speak("Olá André. Sou o NEXUS. Em que posso ajudar?");
+   },350);
+  }
  }
  private void speak(String text){if(!foreground||closed)return;if(ready){voiceHandler.removeCallbacks(continueListening);spokenText=text.replaceAll("https?://\\S+","").replaceAll("(?m)^[\\s]*[-•*\\d.)]+[\\s]*","")
   .replaceAll("[*_#\\x60]","").replaceAll("\\s{2,}"," ").trim();
-  spokenText=spokenText.substring(0,Math.min(spokenText.length(),Math.min(2200,TextToSpeech.getMaxSpeechInputLength())));tts.speak(spokenText,TextToSpeech.QUEUE_FLUSH,null,"nexus");}else toast("Voz indisponível. Verifica a síntese de voz do Android.");}
+  spokenText=spokenText.substring(0,Math.min(spokenText.length(),Math.min(2200,TextToSpeech.getMaxSpeechInputLength())));js("window.nexusSpeechLengthChanged&&nexusSpeechLengthChanged("+spokenText.length()+")");tts.speak(spokenText,TextToSpeech.QUEUE_FLUSH,null,"nexus");}else toast("Voz indisponível. Verifica a síntese de voz do Android.");}
  private void listen(){
   voiceHandler.removeCallbacks(continueListening);
   if(tts!=null)tts.stop();
@@ -90,7 +98,9 @@ public class MainActivity extends Activity {
  private void onSpokenCommand(String spoken){
   if(!foreground||closed)return;
   String normalized=CommandText.clean(spoken).replaceFirst("^(nexus|nexos|anexos)\\s+","");
-  if(normalized.matches("^(para de ouvir|para a conversa|desliga o microfone|para a escuta)$")){continuous=false;voiceHandler.removeCallbacks(continueListening);if(capture!=null)capture.close();stopService(new Intent(this,HandsFreeService.class));js("nexusConversationState(false)");js("nexusHandsFreeState(false)");js("nexusVoiceState('idle')");return;}
+  if(normalized.matches("^(ativa|ligar|liga|inicia) (o )?(modo )?maos livres$")){handsFree();return;}
+   if(normalized.matches("^(desativa|desliga|para) (o )?(modo )?maos livres$")){if(HandsFreeService.active)handsFree();else{continuous=false;if(capture!=null){capture.close();capture=null;}js("nexusConversationState(false)");}return;}
+   if(normalized.matches("^(para de ouvir|para a conversa|desliga o microfone|para a escuta)$")){continuous=false;voiceHandler.removeCallbacks(continueListening);if(capture!=null)capture.close();stopService(new Intent(this,HandsFreeService.class));js("nexusConversationState(false)");js("nexusHandsFreeState(false)");js("nexusVoiceState('idle')");return;}
   if(normalized.matches("^(sair do nexus|fecha o nexus|fechar nexus|desliga o nexus)$")){exit();return;}
   if(normalized.matches("^(continua|proxima tarefa|proximo comando|seguinte comando|faz o seguinte)$")&&!actionPlan.isEmpty()){
     String next=actionPlan.removeFirst();
@@ -176,8 +186,11 @@ public class MainActivity extends Activity {
  }
  private void handsFree(){
   if(HandsFreeService.active){
+    continuous=false;voiceHandler.removeCallbacks(continueListening);
+    if(capture!=null){capture.close();capture=null;}
     stopService(new Intent(this,HandsFreeService.class));
-    js("nexusHandsFreeState(false)");
+    js("nexusHandsFreeState(false)");js("nexusConversationState(false)");
+    js("nexusFeedback('Mãos livres desligado.')");
     toast("Modo mãos-livres desligado. O microfone parou.");
     return;
   }
@@ -196,8 +209,11 @@ public class MainActivity extends Activity {
       try{
         if(!BubbleService.active)startForegroundService(new Intent(this,BubbleService.class));
         startForegroundService(new Intent(this,HandsFreeService.class));
-        js("nexusHandsFreeState(true)");
-        toast("Mãos-livres ativo. Abre outra app e diz «NEXUS, abre Instagram».");
+        continuous=true;
+        js("nexusHandsFreeState(true)");js("nexusConversationState(true)");
+        js("nexusFeedback('Mãos livres ativo. Fala comigo; noutras aplicações diz NEXUS e a ordem.')");
+        listen();
+        toast("Mãos livres ativo. Podes falar já ou abrir outra aplicação.");
       }catch(Exception ex){
         js("nexusHandsFreeState(false)");
         toast("O Android não permitiu ativar o microfone. Verifica permissões.");
@@ -237,7 +253,7 @@ public class MainActivity extends Activity {
    "Alternar avatar 3D","Memória e aprendizagem","Lembretes e agenda","Aplicações detetadas",
    "Operador Android · Acessibilidade","Código de acesso ao servidor","Testar voz","Ecrã inteiro / normal",
    "Diagnóstico e limites","Recarregar interface","Apagar histórico da sessão","Sair do NEXUS"};
-  new AlertDialog.Builder(this).setTitle("NEXUS · 1.1.0").setItems(choices,(d,w)->{
+  new AlertDialog.Builder(this).setTitle("NEXUS · 1.2.0").setItems(choices,(d,w)->{
    switch(w){
     case 0:conversation();break;
     case 1:handsFree();break;
@@ -400,6 +416,11 @@ public class MainActivity extends Activity {
   ReminderManager.scheduleAll(this);
   if(web!=null)web.onResume();
   if(loaded)js("nexusHandsFreeState("+HandsFreeService.active+")");
+  boolean returningWithCommand=pendingHandsFree!=null||pendingQuestion!=null;
+  if(HandsFreeService.active&&!returningWithCommand){
+   continuous=true;js("nexusConversationState(true)");
+   voiceHandler.postDelayed(()->{if(foreground&&!closed&&continuous&&capture==null)listen();},700);
+  }
   greet();
   if(loaded&&pendingQuestion!=null){String q=pendingQuestion;pendingQuestion=null;js("nexusReceiveQuestion("+JSONObject.quote(q)+")");}
   dispatchHandsFreeIfReady();
