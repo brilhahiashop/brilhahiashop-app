@@ -228,7 +228,8 @@ public final class BubbleService extends Service implements SensorEventListener 
         return START_NOT_STICKY;
     }
     @Override public void onTaskRemoved(Intent intent){stopSelf();super.onTaskRemoved(intent);}
-    @Override public void onDestroy(){active=false;airEnabled=false;
+    @Override public void onDestroy(){active=false;airEnabled=false;expanded=false;rotating=false;
+        if(cardFrame!=null){cardFrame.animate().withEndAction(null);cardFrame.animate().cancel();}
         if(sensors!=null)sensors.unregisterListener(this);
         if(root!=null&&windowManager!=null)try{windowManager.removeView(root);}catch(Exception ignored){}
         root=null;stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();

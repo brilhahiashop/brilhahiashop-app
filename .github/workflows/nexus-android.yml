@@ -28,6 +28,10 @@ jobs:
           gradle-version: '8.9'
       - name: Build and lint
         run: gradle -p nexus-android :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon --stacktrace
+      - name: Browser UI regression tests
+        run: |
+          npm install --prefix /tmp/nexus-ui playwright@1.58.2
+          NODE_PATH=/tmp/nexus-ui/node_modules CHROME_PATH=/usr/bin/google-chrome node nexus-android/tests/ui.cjs
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -46,7 +50,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NEXUS-validation-reports
-          path: nexus-android/app/build/reports
+          path: |
+            nexus-android/app/build/reports
+            /tmp/nexus-mobile.png
       - name: Publish tested APK
         env:
           GH_TOKEN: ${{ github.token }}
