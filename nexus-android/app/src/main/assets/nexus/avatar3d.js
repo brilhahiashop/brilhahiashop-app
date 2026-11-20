@@ -1,6 +1,6 @@
 /* Original procedural 3D android bust. No external model, texture, tracking or network. */
 (()=>{
- const host=document.querySelector('#avatarWrap');let renderer,raf=0,enabled=true,available=true,voice='idle',wordUntil=0,last=0;
+ const host=document.querySelector('#avatarWrap');let renderer,raf=0,enabled=false,available=true,voice='idle',wordUntil=0,last=0;
  const fallback=message=>{host.classList.remove('model-ready');document.querySelector('#avatarMode').textContent='ILUSTRAÇÃO';document.querySelector('#avatarInfo').textContent=message;};
  try{
  const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,30);camera.position.set(0,.55,5.9);camera.lookAt(0,.15,0);
@@ -33,9 +33,9 @@
  }
  const start=()=>{if(!raf&&enabled&&!document.hidden)raf=requestAnimationFrame(frame);};
  window.nexusAvatarState=s=>{voice=s;};window.nexusSpeechRange=word=>{wordUntil=performance.now()+Math.min(800,Math.max(140,String(word).length*70));};
- window.nexusAvatarMode=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D REAL':'ILUSTRAÇÃO';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · BOCA APROXIMADA':'ILUSTRAÇÃO · VOZ ANDROID';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
+ window.nexusAvatarMode=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D ESTILIZADO':'ATIVAR 3D';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · BOCA ANIMADA':'ROSTO REALISTA · FALA ANIMADA';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
  renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();available=false;enabled=false;cancelAnimationFrame(raf);fallback('WebGL indisponível · ilustração local');});
- document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;voice='idle';}else start();});host.classList.add('model-ready');document.querySelector('#avatarMode').textContent='3D REAL';document.querySelector('#avatarInfo').textContent='AVATAR 3D ESTILIZADO · BOCA APROXIMADA';start();
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;voice='idle';}else start();});host.classList.remove('model-ready');document.querySelector('#avatarMode').textContent='ATIVAR 3D';document.querySelector('#avatarInfo').textContent='ROSTO REALISTA · FALA ANIMADA';
  }catch(e){if(renderer)renderer.dispose();fallback('Sem suporte 3D · ilustração local');window.nexusAvatarMode=()=>{};}
  document.querySelector('#avatarMode').onclick=e=>{e.stopPropagation();window.nexusAvatarMode();};
 })();

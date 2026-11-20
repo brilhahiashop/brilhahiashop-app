@@ -14,7 +14,14 @@ import java.util.concurrent.*;
 public class LocalInterfaceTest {
  private WebView find(View v){if(v instanceof WebView)return (WebView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){WebView w=find(g.getChildAt(i));if(w!=null)return w;}}return null;}
  private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(5,TimeUnit.SECONDS);}
- @Test public void handsFreeWakeWordAndAppSwitchingParsing(){
+ @Test public void optInOperatorGrammar(){
+   assertTrue(NexusAccessibilityService.handles("NEXUS, volta atrás"));
+   assertTrue(NexusAccessibilityService.handles("NEXUS, desce"));
+   assertTrue(NexusAccessibilityService.handles("NEXUS, toca em pesquisar"));
+   assertTrue(NexusAccessibilityService.handles("NEXUS, escreve bom dia"));
+   assertFalse(NexusAccessibilityService.handles("NEXUS, envia o pagamento"));
+ }
+  @Test public void handsFreeWakeWordAndAppSwitchingParsing(){
   assertEquals("abre facebook",HandsFreeService.commandAfterWakeWord("NEXUS, abre Facebook"));
   assertEquals("muda para instagram",HandsFreeService.commandAfterWakeWord("NEXUS muda para Instagram"));
   assertNull(HandsFreeService.commandAfterWakeWord("Abre o Facebook"));

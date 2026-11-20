@@ -83,3 +83,17 @@ body{background:
 @media(max-width:390px){.nexus-quick-actions .learn-cta{font-size:9px}.nexus-quick-actions .learn-cta span{font-size:7px}}
 
 .avatar-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:4}.avatar-wrap:not(.model-ready) .avatar-canvas{display:none}.model-ready .avatar,.model-ready .scan,.model-ready .rings{visibility:hidden}.mode-controls{display:flex;gap:6px;justify-content:center;margin:6px}.mode-controls button{border:1px solid #318ca0;border-radius:10px;background:#092033;color:#a5f8ff;font-size:10px;padding:7px 10px}.mode-controls button[aria-pressed=true]{background:#185448}.gesture-selected{border:2px solid #a5ffd8!important;box-shadow:0 0 24px #4ac8b5!important}.signal{font-size:7px;letter-spacing:0}.avatar-canvas{touch-action:pan-y}
+
+/* 0.8: meaningful holographic controls, photorealistic mouth rig and parallax */
+.holo-action{cursor:pointer;pointer-events:auto!important;text-align:center;appearance:none;z-index:6;display:flex;align-items:center;justify-content:space-around;animation:holoPane 5s ease-in-out infinite}
+.holo-action small{font-size:7px!important;color:#b9faff}.holo-action b{font-size:10px!important;color:#83eeff}
+.holo-action span{font-size:22px;line-height:1;text-shadow:0 0 17px rgba(101,235,255,.96)}
+.holo-action:active{filter:brightness(1.6);transform:scale(.96)}
+.holo-action:focus-visible{outline:2px solid #8cfaff}
+#hudApps{left:2%}#hudAgenda{right:2%}
+.photo-mouth-rig{position:absolute;z-index:8;pointer-events:none;opacity:.94;mix-blend-mode:normal;filter:blur(.25px)}
+.model-ready .photo-mouth-rig{display:none}
+.avatar-wrap:not(.model-ready){transition:transform .7s ease-out;animation:photoDepth 6.8s ease-in-out infinite}
+@keyframes photoDepth{0%,100%{transform:perspective(1000px) rotateY(-1.6deg) translateY(0)}50%{transform:perspective(1000px) rotateY(1.6deg) translateY(-6px)}}
+.mode-controls{flex-wrap:wrap}.mode-controls button{min-height:30px}
+#operatorBtn{border-color:rgba(121,253,198,.5);color:#a1ffe2}

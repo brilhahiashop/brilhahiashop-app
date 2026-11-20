@@ -51,6 +51,10 @@ window.nexusHandsFreeState=enabled=>{
  b.setAttribute('aria-pressed',enabled?'true':'false');
  $('#handsFreeStatus').textContent=enabled?'MICROFONE ATIVO':'DESLIGADO';
 };
+
+$('#hudApps').onclick=()=>{if(native&&native.apps)native.apps();else notice.textContent='Abre o NEXUS Android para ver as aplicações.';};
+$('#hudAgenda').onclick=()=>{if(native&&native.reminders)native.reminders();else notice.textContent='Consulta os lembretes na aplicação Android.';};
+$('#operatorBtn').onclick=()=>{if(native&&native.operator)native.operator();else notice.textContent='O modo Operador necessita de autorização nas definições Android.';};
 $('#handsFreeBtn').onclick=()=>{
  if(native&&native.handsFree)native.handsFree();
  else notice.textContent='Modo mãos livres disponível na aplicação Android.';

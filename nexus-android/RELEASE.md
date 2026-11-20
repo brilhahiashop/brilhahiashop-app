@@ -1,22 +1,19 @@
-# NEXUS Android 0.7.0 — evolução da 0.6.1
+# NEXUS Android 0.8.0
 
-APK experimental instalável. Mantém IA existente, interface offline, lembretes, aprendizagem local e mãos livres autorizadas até 15 minutos.
+## Preservado de versões anteriores
+- Aplicação local com holograma, conversa por voz, IA Vercel, pesquisa, lembretes, Mãos Livres opt-in, aprendizagem de rotinas.
+- Avatar 3D estilizado em Three.js (opcional) e reconhecimento de gestos via MediaPipe com câmara frontal visível e autorização.
+- Botão flutuante, abertura de aplicações, variantes de voz do WhatsApp.
 
-Novidades:
-- Avatar 3D real, procedural e estilizado: cabeça, olhos, pestanejar, respiração, ombros e boca articulados; estados de escuta, pensamento e fala. Three.js incluído no APK. Botão para voltar à ilustração; fallback se WebGL falhar. Não é um humano fotorrealista.
-- Movimento de boca aproximado, guiado pelos intervalos de fala do motor TTS quando disponíveis; alternativa animada para motores sem esses eventos. Não é lip-sync por fonemas nem captura facial.
-- Conversa contínua opcional com a aplicação visível; recomeça a ouvir após a resposta e pára ao minimizar. MÃOS LIVRES é uma autorização separada para outras apps, com indicador e notificação. O reconhecimento do Android pode utilizar serviços de rede.
-- WhatsApp e WhatsApp Business distinguíveis; mais variantes de pronúncia e comandos educados, como «podes abrir o Whats App por favor». Perguntas como «como abrir» não são executadas como ordens.
-- Gestos experimentais MediaPipe no dispositivo: mão em movimento roda painéis; mão aberta seleciona; polegar confirma o painel. Câmara frontal visível, sem gravação/upload, encerrada ao minimizar/sair. Não confirma compras, mensagens ou ações noutras apps.
-- SAIR desliga câmara, captura de voz, TTS, mãos livres, voz de lembretes e painel flutuante. Lembretes agendados mantêm notificações; depois de SAIR não retomam voz até reabrir o NEXUS.
-- Corrigido reencaminhamento de comandos não reconhecidos para a IA, evitando ciclos na interface.
+## Novo nesta versão
+1. **Modo rosto realista:** imagem holográfica de alta definição com animação local de lábios alinhada com o início/fim da fala e, quando existirem, intervalos de TTS. Transições de profundidade e modo alternativo 3D. Não é um modelo facial fotorealista 3D com fonemas certificados.
+2. **Operador Android opcional:** serviço de Acessibilidade com permissão explícita nas Definições. Comandos: "NEXUS, volta atrás", "NEXUS, desce", "NEXUS, toca em pesquisar" e "NEXUS, escreve olá" (sem enviar).
+3. **Interface funcional:** os painéis laterais do holograma tornam-se botões reais para aplicações e lembretes. Botão OPERADOR abre instruções de autorização. Painel flutuante simplificado com ações reais.
+4. **Privacidade:** ações locais e por iniciativa do utilizador, sem persistir conteúdo dos ecrãs. Não são automatizados envios de mensagens, compras, transferências, eliminações ou aceitação de permissões.
 
-Validação obrigatória para publicação: compilação, testes unitários da gramática de comandos, Android Lint e testes Chromium da interface/3D. Teste em emulador é adicional; consultar o resultado específico no GitHub Actions. As permissões, deteção física das mãos, motor de voz, apps instaladas, gestão de bateria e desempenho gráfico requerem teste no telemóvel.
-
-Ainda não inclui: controlo universal de ecrãs Android; rosto humano fotorrealista; lip-sync por fonemas; novas ligações a contas empresariais. Preserva as integrações existentes sem inventar acesso.
-
-Instalação: descarregar APK. Em MENU > Código de acesso, usar o código privado existente do NEXUS (não uma chave OpenAI). Gestos, Conversa e Mãos Livres são opcionais e pedem autorização na app. Se o Android rejeitar a atualização por assinatura diferente, é preciso desinstalar a versão antiga; isso apaga os dados locais, incluindo rotinas e lembretes.
-
-É um APK debug de pré-lançamento, não verificado pela Play Store. Assinatura gerada no CI. Nenhuma chave privada incluída. Apenas ficheiros do NEXUS e respetivo workflow foram alterados; BRILHAH preservada.
-
-Componentes: Three.js 0.160.1 (MIT, licença incluída); MediaPipe Tasks Vision 0.10.21 e modelo oficial Gesture Recognizer, transferido durante a compilação e verificado por SHA-256. O APK leva o modelo integrado e não precisa de o descarregar para reconhecer gestos.
+## Limitações e testes
+- Acessibilidade pode não conseguir interagir com alguns ecrãs protegidos ou interfaces específicas; só funciona após ativação voluntária.
+- A animação de lábios é aproximada, não reconstrução facial 3D por fonemas.
+- A escuta no segundo plano permanece dependente das restrições Android e do motor de voz.
+- Verificar manualmente no equipamento: whatsapp, voz, fotos, opções de acessibilidade e restrições de bateria.
+- As permissões da câmara e microfone não são necessárias para abrir a aplicação; pedidas quando a função é ativada.

@@ -169,6 +169,9 @@ public final class HandsFreeService extends Service {
     boolean ok=startActivitySafe(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME));
     tell(ok?"Voltei ao ecrã inicial.":"O Android não permitiu voltar ao ecrã inicial.",false);return;
   }
+  if(NexusAccessibilityService.handles(q)){
+    tell(NexusAccessibilityService.perform(q),false);return;
+  }
   String target=requestedApp(q);
   if(target!=null){
     boolean ok=launchApp(target);

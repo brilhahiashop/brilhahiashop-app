@@ -35,13 +35,13 @@ import android.widget.Toast;
 public final class BubbleService extends Service implements SensorEventListener {
     public static volatile boolean active = false;
     private static final String CHANNEL = "nexus_floating_v3";
-    private final String[] headings = {"✦  NEXUS", "◉  VOZ", "▣  APLICAÇÕES", "◎  GESTOS", "☷  CONTROLOS"};
+    private final String[] headings = {"✦  NEXUS", "◉  FALAR", "▣  APLICAÇÕES", "✋  GESTOS", "⌂  ECRÃ INICIAL"};
     private final String[] descriptions = {
-        "CENTRO HOLOGRÁFICO\nDesliza para os lados para rodar o painel.",
-        "COMANDO POR VOZ\nDiz 'abre Facebook', 'abre Instagram' ou faz outra pergunta.",
-        "MULTITAREFA ANDROID\nAbre aplicações instaladas; o Android gere as que ficam em segundo plano.",
-        "GESTOS SEM TOQUE\nCom um sensor de proximidade, passa a mão perto da zona superior do telemóvel para rodar o painel.",
-        "NAVEGAÇÃO\nAbre o NEXUS, regressa ao ecrã inicial ou minimiza este controlo."
+       "Abrir a assistente e o holograma.",
+       "Falar agora sem abrir a janela Google.",
+       "Pedir por voz para abrir uma aplicação.",
+       "Ativar ou desligar a navegação pelo sensor de proximidade.",
+       "Regressar ao ecrã inicial do telemóvel."
     };
     private int current = 0;
     private int smallX, smallY;
@@ -106,7 +106,7 @@ public final class BubbleService extends Service implements SensorEventListener 
         panelWidth=Math.min(screen-dp(22),dp(376));
         params.x=Math.max(dp(8),(screen-panelWidth)/2);
         params.y=Math.max(dp(80),Math.min(params.y-dp(100),getResources().getDisplayMetrics().heightPixels-dp(360)));
-        setSize(panelWidth,dp(346));
+        setSize(panelWidth,dp(266));
 
         LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
         body.setPadding(dp(14),dp(12),dp(14),dp(11));
@@ -114,7 +114,7 @@ public final class BubbleService extends Service implements SensorEventListener 
         body.setElevation(dp(16));
         root.addView(body,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView caption=text("✦ NEXUS  ·  PAINEL FLUTUANTE",12,0xffa5f4ff);
+        TextView caption=text("✦ NEXUS  ·  COMANDOS",12,0xffa5f4ff);
         caption.setLetterSpacing(.17f);
         header.addView(caption,new LinearLayout.LayoutParams(0,dp(44),1));
         Button shrink=smallButton("−");shrink.setContentDescription("Minimizar painel");shrink.setOnClickListener(v->showBubble());
@@ -172,10 +172,13 @@ public final class BubbleService extends Service implements SensorEventListener 
     }
     private void primaryAction(){
         switch(current){
-            case 0:case 4:launch(MainActivity.class);break;
-            case 1:launch(VoiceCommandActivity.class);break;
-            case 2:launch(VoiceCommandActivity.class);break;
+            case 0:launch(MainActivity.class);break;
+            case 1:case 2:launch(VoiceCommandActivity.class);break;
             case 3:toggleAir();break;
+            case 4:
+               Intent home=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+               try{startActivity(home);}catch(Exception ex){actionMessage("Não foi possível voltar ao ecrã inicial.");}
+               break;
         }
     }
     private void launch(Class<?> activity){
