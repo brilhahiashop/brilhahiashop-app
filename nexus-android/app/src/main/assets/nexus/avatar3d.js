@@ -2,7 +2,11 @@
 (()=>{
  const host=document.querySelector('#avatarWrap');let renderer,raf=0,enabled=false,available=true,voice='idle',wordUntil=0,last=0;
  const fallback=message=>{host.classList.remove('model-ready');document.querySelector('#avatarMode').textContent='ILUSTRAÇÃO';document.querySelector('#avatarInfo').textContent=message;};
- try{
+ let prepared=false,innerToggle=null;
+ const start3D=()=>{
+  if(prepared)return;
+  prepared=true;
+  try{
  const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,30);camera.position.set(0,.55,5.9);camera.lookAt(0,.15,0);
  renderer=new T.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setClearColor(0,0);host.prepend(renderer.domElement);renderer.domElement.className='avatar-canvas';
  const skin=new T.MeshStandardMaterial({color:0x3898b4,metalness:.68,roughness:.31,emissive:0x062a42,emissiveIntensity:.6});
@@ -33,9 +37,11 @@
  }
  const start=()=>{if(!raf&&enabled&&!document.hidden)raf=requestAnimationFrame(frame);};
  window.nexusAvatarState=s=>{voice=s;};window.nexusSpeechRange=word=>{wordUntil=performance.now()+Math.min(800,Math.max(140,String(word).length*70));};
- window.nexusAvatarMode=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D ESTILIZADO':'ATIVAR 3D';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · LUZ REATIVA':'HOLOGRAMA · ENERGIA REATIVA';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
+ innerToggle=()=>{if(!available){fallback('3D interrompido · usa MENU para recarregar');return;}enabled=!enabled;host.classList.toggle('model-ready',enabled);document.querySelector('#avatarMode').textContent=enabled?'3D ESTILIZADO':'ATIVAR 3D';document.querySelector('#avatarInfo').textContent=enabled?'AVATAR 3D ESTILIZADO · LUZ REATIVA':'HOLOGRAMA · ENERGIA REATIVA';if(enabled)start();else{cancelAnimationFrame(raf);raf=0;}};
  renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();available=false;enabled=false;cancelAnimationFrame(raf);fallback('WebGL indisponível · ilustração local');});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;voice='idle';}else start();});host.classList.remove('model-ready');document.querySelector('#avatarMode').textContent='ATIVAR 3D';document.querySelector('#avatarInfo').textContent='ROSTO REALISTA · FALA ANIMADA';
- }catch(e){if(renderer)renderer.dispose();fallback('Sem suporte 3D · ilustração local');window.nexusAvatarMode=()=>{};}
+  }catch(e){if(renderer)renderer.dispose();fallback('Sem suporte 3D · ilustração local');innerToggle=()=>{};}
+ };
+ window.nexusAvatarMode=()=>{start3D();if(innerToggle)innerToggle();};
  document.querySelector('#avatarMode').onclick=e=>{e.stopPropagation();window.nexusAvatarMode();};
 })();
