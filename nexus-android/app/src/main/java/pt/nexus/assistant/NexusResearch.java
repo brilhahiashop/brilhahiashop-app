@@ -51,7 +51,7 @@ final class NexusResearch {
  private static byte[] fetch(String url,int cap) throws IOException {
   URL u=new URL(url);if(!"https".equals(u.getProtocol()))throw new IOException("Só HTTPS");
   HttpsURLConnection c=(HttpsURLConnection)u.openConnection();
-  c.setInstanceFollowRedirects(false);
+  c.setInstanceFollowRedirects(true);
   c.setConnectTimeout(2900);c.setReadTimeout(3300);
   c.setRequestProperty("Accept","application/rss+xml,application/xml,application/json,text/xml");
   c.setRequestProperty("User-Agent","Mozilla/5.0 (compatible; NEXUSAndroid/1.0; personal research)");

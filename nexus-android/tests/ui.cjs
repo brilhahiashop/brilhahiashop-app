@@ -30,7 +30,7 @@ await page.locator('#panelExpand').click();
 assert.equal(await page.locator('#panel').evaluate(e=>e.classList.contains('expanded')),true);
 await page.locator('#panelExpand').click();
 assert.equal(await page.locator('#panelSources a').count(),1);
-await page.evaluate(()=>{addCard('Música','Painel 2');rotate(-1)});assert.equal(await page.locator('#panelTopic').textContent(),'Fotografia');
+await page.evaluate(()=>{addCard('Música','Painel 2');rotate(-1)});assert.equal(await page.locator('#panelTopic').textContent(),'Notícias');
 await page.evaluate(()=>{nexusVoiceState('thinking');nexusReceiveQuestion('Teste depois de reconhecimento de voz')});
 assert.equal(await page.evaluate(()=>calls.at(-1).command),'Teste depois de reconhecimento de voz');
 await page.evaluate(()=>nexusAskAI('Teste depois de reconhecimento de voz'));
