@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070B14">
+<meta name="mobile-web-app-capable" content="yes">
+<title>NEXUS</title>
+<style>
+@property --c{syntax:'<color>';inherits:true;initial-value:#4F7CFF}
+:root{--bg:#070B14;--ink:#E8F0FF;--mute:#8FA0BF;--line:#1B2740;--panel:#0D1424;--idle:#4F7CFF;--listen:#3EE0C8;--think:#A78BFA;--speak:#FFB44D;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);overflow:hidden}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px}
+header b{font-size:15px;letter-spacing:.35em;font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+.ghost{background:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--mute);font-size:14px}
+.ghost[aria-pressed=true]{border-color:var(--listen);color:var(--listen)}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:0 20px;min-height:0}
+.orb{--c:var(--idle);position:relative;width:min(62vw,280px);aspect-ratio:1;border:0;border-radius:50%;padding:0;transition:--c .6s;
+background:radial-gradient(circle at 35% 28%,#ffffff88,transparent 24%),radial-gradient(circle,var(--c),color-mix(in srgb,var(--c) 25%,#000) 72%);
+box-shadow:0 0 70px color-mix(in srgb,var(--c) 50%,transparent),inset 0 0 40px #0007;animation:breathe 5s ease-in-out infinite}
+.orb::before,.orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:1px solid var(--c);opacity:.0}
+.orb.listening{--c:var(--listen);animation:breathe 1.6s ease-in-out infinite}
+.orb.listening::before{animation:ring 1.6s ease-out infinite}
+.orb.thinking{--c:var(--think);animation:none}
+.orb.thinking::before{inset:-12px;border:2px solid transparent;border-top-color:var(--c);opacity:1;animation:spin 1s linear infinite}
+.orb.speaking{--c:var(--speak);animation:talk .9s ease-in-out infinite}
+.orb.speaking::before{animation:ring 1.2s ease-out infinite}
+@keyframes breathe{50%{transform:scale(1.04)}}
+@keyframes talk{0%,100%{transform:scale(1)}30%{transform:scale(1.07)}60%{transform:scale(.98)}}
+@keyframes ring{from{transform:scale(.96);opacity:.7}to{transform:scale(1.25);opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+#cap{min-height:3.2em;max-width:34ch;text-align:center;color:var(--mute);font-size:17px}
+footer{padding:10px 16px 16px;display:flex;gap:8px}
+footer input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--ink);padding:12px 18px;font:inherit;min-width:0}
+footer input:focus,.orb:focus-visible,button:focus-visible{outline:2px solid var(--listen);outline-offset:2px}
+#send{background:var(--idle);border:0;border-radius:999px;padding:0 20px;font-weight:600;color:#fff}
+.win{position:fixed;left:0;right:0;bottom:0;max-height:68dvh;background:var(--panel);border-top:1px solid var(--line);border-radius:22px 22px 0 0;transform:translateY(105%);transition:transform .25s ease;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0);z-index:5}
+.win.open{transform:none}
+.win-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 8px}
+.win-h h2{margin:0;font-size:17px;font-weight:600}
+.win-b{padding:4px 18px 18px;overflow:auto}
+.win-b p{margin:0 0 .8em;white-space:pre-wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.row a,.row button{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:9px 14px;color:var(--ink);text-decoration:none;font-size:15px}
+.big{font-size:44px;font-weight:300;line-height:1.1}
+.days{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 16px}
+.days div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:14px;color:var(--mute)}
+.days b{display:block;color:var(--ink);font-size:16px}
+label{display:block;margin:10px 0 4px;color:var(--mute);font-size:14px}
+.win-b input[type=text],.win-b input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:10px 12px;font:inherit}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <b>NEXUS</b>
+  <div style="display:flex;gap:8px">
+    <button class="ghost" id="hands" aria-pressed="false">Mãos livres</button>
+    <button class="ghost" id="gear" aria-label="Definições">Definições</button>
+  </div>
+</header>
+<main>
+  <button class="orb" id="orb" aria-label="Tocar para falar com o Nexus"></button>
+  <div id="cap" aria-live="polite">Toque no orbe e fale comigo.</div>
+</main>
+<footer>
+  <input id="txt" type="text" placeholder="Ou escreva aqui…" autocomplete="off" enterkeyhint="send">
+  <button id="send">Enviar</button>
+</footer>
+<section class="win" id="win" aria-live="polite">
+  <div class="win-h"><h2 id="wt"></h2><button class="ghost" id="wx">Fechar</button></div>
+  <div class="win-b" id="wb"></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s);
+const NATIVE=!!window.Android;
+const pend={};let nid=0,saidN='';
+function b64txt(b){const bin=atob(b);return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)))}
+function netFetch(url,opts){
+  opts=opts||{};
+  if(!NATIVE)return fetch(url,opts);
+  return new Promise((res,rej)=>{
+    const id='n'+(++nid);
+    pend[id]=(st,b)=>{const txt=b64txt(b);if(st<0)return rej(new Error(txt||'sem ligação'));
+      res({ok:st>=200&&st<300,status:st,text:async()=>txt,json:async()=>JSON.parse(txt)})};
+    Android.http(id,url,opts.method||'GET',JSON.stringify(opts.headers||{}),opts.body||'');
+  });
+}
+window.nx={
+  net(id,st,b){const p=pend[id];if(!p)return;delete pend[id];p(st,b)},
+  ttsDone(){setState('idle','Toque no orbe e fale comigo.');if(hands&&!busy)setTimeout(listen,500)},
+  stt(type,txt){
+    if(type==='ready'){listening=true;setState('listening','A ouvir…')}
+    else if(type==='partial'){cap('«'+txt+'»')}
+    else if(type==='final'){listening=false;if(txt.trim())ask(txt);else{setState('idle','Não ouvi nada. Toque no orbe para tentar de novo.');if(hands&&!busy)setTimeout(listen,800)}}
+    else if(type==='error'){listening=false;
+      if(txt==='permission'||txt==='9'){hands=false;syncHands();setState('idle','Sem permissão para o microfone. Autorize-o nas definições do Android.')}
+      else if(txt==='nsr'){setState('idle','Este telemóvel não tem reconhecimento de voz. Instale ou ative a app Google.')}
+      else if(txt==='6'||txt==='7'){setState('idle','Não ouvi nada. Toque no orbe para tentar de novo.');if(hands&&!busy)setTimeout(listen,800)}
+      else if(txt==='5'){setState('idle','Toque no orbe e fale comigo.')}
+      else setState('idle','Erro no reconhecimento de voz (código '+txt+'). Verifique a ligação à internet.');
+    }
+  }
+};
+
+/* ---------- comandos do telemóvel (só na app Android) ---------- */
+const SITES={facebook:'https://www.facebook.com',instagram:'https://www.instagram.com',youtube:'https://www.youtube.com',google:'https://www.google.com'};
+function phoneCmd(raw){
+  const t=raw.toLowerCase().replace(/[?.!,]/g,' ').replace(/\s+/g,' ').trim();let m;
+  if(/(desliga|apaga|desativa)\s+(a\s+)?lanterna/.test(t)){Android.torch(false);return'Lanterna desligada.'}
+  if(/(liga|acende|ativa|põe)\s+(a\s+)?lanterna/.test(t)){Android.torch(true);return'Lanterna ligada.'}
+  if((m=t.match(/(?:alarme|acorda-?me)\D*(\d{1,2})(?:\s*(?:h|horas?|:)\s*(\d{1,2}))?/))){
+    let h=+m[1],mi=m[2]?+m[2]:(/ e meia/.test(t)?30:0);
+    if(/da (tarde|noite)/.test(t)&&h<12)h+=12;
+    if(h<24&&mi<60){Android.alarm(h,mi,'NEXUS');return'Alarme definido para as '+String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')+'.'}
+  }
+  if((m=t.match(/(?:temporizador|timer|cron[óo]metro|contagem)\D*(\d+)\s*(segundos?|minutos?|horas?)/))){
+    const n=+m[1],u=m[2][0],s=u==='h'?n*3600:u==='m'?n*60:n;
+    Android.timer(s,'NEXUS');return'Temporizador definido para '+n+' '+m[2]+'.'}
+  if((m=t.match(/\b(?:liga|ligar|telefona|chama)\b.*?((?:\d\s?){9,})/))){
+    const d=m[1].replace(/\D/g,'');Android.dial(d);return'A abrir o marcador com o número '+d.split('').join(' ')+'. Confirme a chamada no ecrã.'}
+  if((m=t.match(/(?:leva-me|navegar|navega|direções|direcoes|como chego|como chegar|rota)\s+(?:ao|à|até|para|a)?\s+(.+)/))){
+    Android.navigate(m[1]);return'A abrir o mapa para '+m[1]+'.'}
+  if((m=t.match(/(aumenta|sobe|baixa|diminui|reduz)\s+(?:o\s+)?volume/))){
+    Android.volume(/aumenta|sobe/.test(m[1])?'up':'down');return'Volume ajustado.'}
+  if((m=t.match(/^(?:abre|abrir|abra)\s+(?:as\s+)?(?:definições|configurações)(?:\s+(?:de|do|da)\s+(wi-?fi|bluetooth))?$/))){
+    Android.settings(m[1]?m[1].replace('-',''):'');return'A abrir as definições.'}
+  if((m=t.match(/^(?:pesquisa|pesquisar|procura|procurar)\s+(?:no google\s+)?(.+)/))){
+    Android.openUrl('https://www.google.com/search?q='+encodeURIComponent(m[1]));return'A pesquisar '+m[1]+' no Google.'}
+  if((m=t.match(/^(?:abre|abrir|abra|inicia|iniciar|lança)\s+(?:a\s+|o\s+|as\s+|os\s+)?(?:aplicação\s+|aplicativo\s+|app\s+)?(.+)$/))){
+    const n=m[1].trim();
+    if(Android.openApp(n)==='ok')return'A abrir '+n+'.';
+    if(SITES[n]){Android.openUrl(SITES[n]);return'A abrir '+n+' no navegador.'}
+    return'Não encontrei a aplicação '+n+' instalada.';
+  }
+  return null;
+}
+const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const cfg={url:store.get('url','https://gen.pollinations.ai/v1/chat/completions'),model:store.get('model','openai'),key:store.get('key','')};
+let hands=store.get('hands','0')==='1',busy=false,listening=false,rec=null,history=[];
+
+const SYS=`És o NEXUS, um assistente pessoal por voz. Responde sempre em português de Portugal (pt-PT), nunca em português do Brasil, com tom formal e respeitoso. As respostas devem ser detalhadas e bem explicadas, mas escritas para serem ditas em voz alta: sem markdown, sem asteriscos, sem listas com símbolos, em frases claras. Ajudas o utilizador a melhorar a sua vida financeira e a escolher e montar um negócio próprio, preferindo sempre soluções gratuitas ou de custo muito baixo. Se não souberes algo, di-lo com honestidade em vez de inventar.`;
+
+/* ---------- estado visual ---------- */
+function setState(s,msg){$('#orb').className='orb '+(s==='idle'?'':s);if(msg!==undefined)$('#cap').textContent=msg}
+const cap=t=>$('#cap').textContent=t;
+
+/* ---------- janelas ---------- */
+let winTimer;
+function showWin(title,build){
+  const w=$('#win');clearTimeout(winTimer);
+  const fill=()=>{$('#wt').textContent=title;const b=$('#wb');b.replaceChildren();build(b);w.classList.add('open')};
+  if(w.classList.contains('open')){w.classList.remove('open');winTimer=setTimeout(fill,260)}else fill();
+}
+const closeWin=()=>{clearTimeout(winTimer);$('#win').classList.remove('open')};
+$('#wx').onclick=closeWin;
+function el(tag,txt,cls){const e=document.createElement(tag);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
+function links(list){const r=el('div',null,'row');list.forEach(([t,u])=>{const a=el('a',t);a.href=u;a.target='_blank';a.rel='noopener';r.append(a)});return r}
+
+/* ---------- tempo (Open-Meteo, grátis e sem chave) ---------- */
+const WMO=c=>c===0?'céu limpo':c<4?'parcialmente nublado':c<49?'nevoeiro':c<68?'chuva':c<78?'neve':c<83?'aguaceiros':'trovoada';
+async function getWeather(text){
+  let lat,lon,name;
+  const m=text.replace(/[?.!]+$/,'').match(/\b(?:em|no|na|de|do|da)\s+([A-Za-zÀ-ÿ' -]{3,30})$/i);
+  if(m&&!/^(hoje|amanhã|manhã|agora|casa)$/i.test(m[1].trim())){
+    try{const g=await(await netFetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=pt&name='+encodeURIComponent(m[1].trim()))).json();
+      if(g.results&&g.results.length){lat=g.results[0].latitude;lon=g.results[0].longitude;name=g.results[0].name}}catch(e){}
+  }
+  if(lat==null){
+    try{if(NATIVE){const l=Android.location().split(',');if(l.length<2)throw 0;lat=+l[0];lon=+l[1]}else{const p=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{timeout:6000}));lat=p.coords.latitude;lon=p.coords.longitude}name='a sua localização'}
+    catch(e){lat=38.72;lon=-9.14;name='Lisboa'}
+  }
+  const w=await(await netFetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&forecast_days=3`)).json();
+  return {name,w};
+}
+function weatherCtx({name,w}){
+  const c=w.current,d=w.daily;
+  return `Dados meteorológicos reais para ${name}: agora ${Math.round(c.temperature_2m)}°C (sensação ${Math.round(c.apparent_temperature)}°C), ${WMO(c.weather_code)}, vento ${Math.round(c.wind_speed_10m)} km/h. Próximos dias (máx/mín, prob. chuva): `+
+  d.time.map((t,i)=>`${t}: ${Math.round(d.temperature_2m_max[i])}/${Math.round(d.temperature_2m_min[i])}°C, ${d.precipitation_probability_max[i]}%, ${WMO(d.weather_code[i])}`).join('; ')+'. Usa apenas estes dados para responder.';
+}
+function weatherWin(wd,answer){
+  showWin('Tempo — '+wd.name,b=>{
+    const c=wd.w.current,d=wd.w.daily;
+    b.append(el('div',Math.round(c.temperature_2m)+'°C','big'),el('p',WMO(c.weather_code)+' · sensação '+Math.round(c.apparent_temperature)+'°C · vento '+Math.round(c.wind_speed_10m)+' km/h'));
+    const g=el('div',null,'days');
+    d.time.forEach((t,i)=>{const x=el('div');const day=new Date(t+'T12:00').toLocaleDateString('pt-PT',{weekday:'short'});x.append(el('b',Math.round(d.temperature_2m_max[i])+'° / '+Math.round(d.temperature_2m_min[i])+'°'),document.createTextNode(day+' · '+d.precipitation_probability_max[i]+'%'));g.append(x)});
+    b.append(g,el('p',answer));
+  });
+}
+
+/* ---------- IA gratuita (Pollinations) ---------- */
+async function callAI(messages){
+  const eps=[cfg.url,'https://text.pollinations.ai/openai'];let err;
+  for(const u of eps){
+    try{
+      const h={'Content-Type':'application/json'};if(cfg.key&&u===cfg.url)h.Authorization='Bearer '+cfg.key;
+      const r=await netFetch(u,{method:'POST',headers:h,body:JSON.stringify({model:cfg.model,messages})});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const d=await r.json();const c=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+      if(c)return c.trim();throw new Error('resposta vazia');
+    }catch(e){err=e}
+  }
+  throw err;
+}
+
+/* ---------- intenção -> janela ---------- */
+function intent(t){t=t.toLowerCase();
+  if(/como est[áa] o tempo|tempo (em|hoje|amanh|para)|meteorolog|previs[ãa]o|vai chover|chuva|temperatura/.test(t))return'tempo';
+  if(/facebook/.test(t))return'facebook';
+  if(/not[íi]cias/.test(t))return'noticias';
+  return'geral';
+}
+
+async function ask(text){
+  text=text.trim();if(!text||busy)return;
+  if(NATIVE){const pc=phoneCmd(text);if(pc){setState('idle',pc);speak(pc);return}}
+  busy=true;setState('thinking','«'+text+'»');
+  const kind=intent(text);let extra='',wd=null;
+  try{
+    if(kind==='tempo'){try{wd=await getWeather(text);extra=weatherCtx(wd)}catch(e){extra='Não foi possível obter dados meteorológicos reais; di-lo ao utilizador.'}}
+    if(kind==='noticias')extra='Não tens acesso a notícias em tempo real. Diz isso com franqueza e informa que abriste no ecrã ligações para fontes de notícias portuguesas.';
+    if(kind==='facebook')extra='O utilizador quer o Facebook. Informa que abriste no ecrã um botão para o abrir; não consegues aceder à conta dele.';
+    const msgs=[{role:'system',content:SYS+(NATIVE?' Estás dentro da app Android e executas comandos do telemóvel (abrir aplicações, lanterna, alarmes, temporizadores, chamadas, navegação, volume); quando o utilizador os pede, a app já os trata.':'')+(extra?' '+extra:'')},...history.slice(-10),{role:'user',content:text}];
+    const ans=await callAI(msgs);
+    history.push({role:'user',content:text},{role:'assistant',content:ans});
+    if(kind==='tempo'&&wd)weatherWin(wd,ans);
+    else if(kind==='facebook')showWin('Facebook',b=>{b.append(links([['Abrir o Facebook','https://www.facebook.com']]),el('p',ans))});
+    else if(kind==='noticias')showWin('Notícias',b=>{b.append(links([['RTP Notícias','https://www.rtp.pt/noticias/'],['Público','https://www.publico.pt'],['Google Notícias','https://news.google.com/?hl=pt-PT&gl=PT&ceid=PT:pt-150']]),el('p',ans))});
+    else showWin('Resposta',b=>b.append(el('p',ans)));
+    busy=false;speak(ans);
+  }catch(e){
+    busy=false;setState('idle','Não consegui obter resposta da IA ('+e.message+'). Verifique a ligação à internet ou as Definições.');
+  }
+}
+
+/* ---------- voz: falar ---------- */
+let ptVoice=null;
+function pickVoice(){const v=speechSynthesis.getVoices();ptVoice=v.find(x=>x.lang==='pt-PT')||v.find(x=>x.lang.toLowerCase().startsWith('pt'))||null}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function speak(text){
+  if(NATIVE){const c=text.replace(/[*#_`>~]/g,' ').replace(/\s+/g,' ').trim();setState('speaking','A falar… toque para interromper.');Android.speak(c);return}
+  if(!('speechSynthesis' in window)){setState('idle','');return}
+  speechSynthesis.cancel();
+  const clean=text.replace(/[*#_`>~]/g,' ').replace(/\s+/g,' ').trim();
+  const parts=clean.match(/[^.!?;:]+[.!?;:]?\s*/g)||[clean];
+  const chunks=[];let cur='';
+  parts.forEach(p=>{if((cur+p).length>180&&cur){chunks.push(cur);cur=p}else cur+=p});if(cur)chunks.push(cur);
+  setState('speaking','A falar… toque para interromper.');
+  chunks.forEach((c,i)=>{
+    const u=new SpeechSynthesisUtterance(c);u.lang='pt-PT';if(ptVoice)u.voice=ptVoice;u.rate=1;
+    if(i===chunks.length-1){u.onend=u.onerror=()=>{setState('idle','Toque no orbe e fale comigo.');if(hands&&!busy)setTimeout(listen,500)}}
+    speechSynthesis.speak(u);
+  });
+}
+
+/* ---------- voz: ouvir ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function listen(){
+  if(NATIVE){if(busy||listening)return;Android.listen();return}
+  if(!SR){cap('Este navegador não suporta reconhecimento de voz. Escreva a pergunta em baixo (recomendo o Chrome).');return}
+  if(busy||listening)return;
+  if('speechSynthesis' in window)speechSynthesis.cancel();
+  rec=new SR();rec.lang='pt-PT';rec.interimResults=true;rec.continuous=false;
+  let said='',failed=false;
+  rec.onstart=()=>{listening=true;setState('listening','A ouvir…')};
+  rec.onresult=e=>{said='';for(const r of e.results)said+=r[0].transcript;cap('«'+said+'»')};
+  rec.onerror=e=>{failed=true;if(e.error==='not-allowed'||e.error==='service-not-allowed'){hands=false;syncHands();cap('Sem permissão para o microfone. Autorize-o nas definições do navegador.')}};
+  rec.onend=()=>{listening=false;
+    if(said.trim())ask(said);
+    else{setState('idle',failed?$('#cap').textContent:'Não ouvi nada. Toque no orbe para tentar de novo.');if(hands&&!failed)setTimeout(listen,800)}};
+  try{rec.start()}catch(e){listening=false}
+}
+
+/* ---------- controlos ---------- */
+$('#orb').onclick=()=>{
+  if(listening){NATIVE?Android.stopListening():rec&&rec.stop();return}
+  if(NATIVE&&$('#orb').classList.contains('speaking')){Android.stopSpeaking();setState('idle','Toque no orbe e fale comigo.');return}
+  if('speechSynthesis' in window&&speechSynthesis.speaking){speechSynthesis.cancel();setState('idle','Toque no orbe e fale comigo.');return}
+  listen();
+};
+$('#send').onclick=()=>{const v=$('#txt').value;$('#txt').value='';ask(v)};
+$('#txt').onkeydown=e=>{if(e.key==='Enter')$('#send').click()};
+function syncHands(){$('#hands').setAttribute('aria-pressed',hands);store.set('hands',hands?'1':'0')}
+$('#hands').onclick=()=>{hands=!hands;syncHands();if(hands)listen();else{if(listening){NATIVE?Android.stopListening():rec&&rec.stop()}}};
+syncHands();
+
+$('#gear').onclick=()=>showWin('Definições',b=>{
+  const f=(id,lab,val,type)=>{const l=el('label',lab);l.htmlFor=id;const i=el('input');i.id=id;i.type=type||'text';i.value=val;b.append(l,i)};
+  f('s-url','Endereço da IA (compatível com OpenAI)',cfg.url);
+  f('s-model','Modelo',cfg.model);
+  f('s-key','Chave (opcional, se o serviço a exigir)',cfg.key,'password');
+  const r=el('div',null,'row');r.style.marginTop='16px';
+  const s=el('button','Guardar');
+  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);store.set('key',cfg.key);closeWin()};
+  const n=el('button','Limpar conversa');n.onclick=()=>{history=[];closeWin();cap('Conversa limpa.')};
+  r.append(s,n);b.append(r);
+});
+</script>
+</body>
+</html>

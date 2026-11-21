@@ -1,0 +1,50 @@
+name: NEXUS JARVIS 1.2 APK build
+on:
+  push:
+    branches: [nexus-jarvis-build]
+    paths: ['nexus-jarvis/**', '.github/workflows/nexus-jarvis-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-jarvis-1.2
+  cancel-in-progress: true
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
+      - name: Compile and lint Android APK
+        run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
+      - name: Prepare APK and checksum
+        run: |
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.2.0.apk
+          sha256sum NEXUS-JARVIS-Android-v1.2.0.apk > SHA256SUMS-JARVIS.txt
+      - name: Save built APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-JARVIS-APK-v1.2.0
+          path: |
+            NEXUS-JARVIS-Android-v1.2.0.apk
+            SHA256SUMS-JARVIS.txt
+          if-no-files-found: error
+      - name: Publish separate JARVIS prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create nexus-jarvis-v1.2.0 NEXUS-JARVIS-Android-v1.2.0.apk SHA256SUMS-JARVIS.txt \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "NEXUS JARVIS Android 1.2.0 - independent app" \
+            --notes "APK experimental da aplicação separada pt.nexus.jarvis. Compilação e Android Lint realizados em CI. Comandos de voz e integração com o telemóvel ainda não validados num dispositivo físico. Instala-se ao lado da versão pt.nexus.assistant. APK assinado com chave debug; preserva dados locais antes de reinstalar."
