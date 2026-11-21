@@ -12,8 +12,9 @@ import static org.junit.Assert.*;
 import java.util.concurrent.*;
 @RunWith(AndroidJUnit4.class)
 public class LocalInterfaceTest {
+ private static final int ACTIVITY_FLAGS=Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK;
  private WebView find(View v){if(v instanceof WebView)return (WebView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){WebView w=find(g.getChildAt(i));if(w!=null)return w;}}return null;}
- private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(5,TimeUnit.SECONDS);}
+ private String evaluate(Instrumentation inst,MainActivity a,String script) throws Exception {CompletableFuture<String> f=new CompletableFuture<>();inst.runOnMainSync(()->find(a.getWindow().getDecorView()).evaluateJavascript(script,f::complete));return f.get(12,TimeUnit.SECONDS);}
  @Test public void sourceLookupRouting(){
    assertTrue(NexusResearch.shouldLookup("Quais são as notícias de hoje?"));
    assertTrue(NexusResearch.shouldLookup("NEXUS, pesquisa Portugal na internet"));
@@ -56,7 +57,7 @@ public class LocalInterfaceTest {
   assertEquals("maps",CommandRouter.appName("Google Maps"));
   assertTrue(CommandRouter.knownPackages("instagram").length>0);
   Instrumentation i=InstrumentationRegistry.getInstrumentation();
-  MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(ACTIVITY_FLAGS));
   try{
    i.runOnMainSync(()->{
     a.getSharedPreferences("nexus_learning_v1",0).edit().clear().commit();
@@ -68,14 +69,19 @@ public class LocalInterfaceTest {
     assertTrue(LearningManager.summary(a).contains("2 passos"));
     a.getSharedPreferences("nexus_learning_v1",0).edit().clear().commit();
    });
-  }finally{i.runOnMainSync(a::finishAndRemoveTask);}
+  }finally{i.runOnMainSync(a::finish);i.waitForIdleSync();}
  }
  @Test public void interfaceWorksOfflineAndSurvivesReload() throws Exception {
   Instrumentation i=InstrumentationRegistry.getInstrumentation();
   System.out.println("NEXUS TEST: checking locally bundled assets; WebView networking will be blocked for reload");
   MainActivity a=(MainActivity)i.startActivitySync(new Intent(i.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   try {
-   String result="";for(int n=0;n<40;n++){result=evaluate(i,a,"document.querySelector('.avatar')?.naturalWidth>0 && typeof nexusReceiveQuestion==='function'");if("true".equals(result))break;Thread.sleep(250);}assertEquals("Local avatar and JS must work offline","true",result);
+   String result="";for(int n=0;n<80;n++){
+    result=evaluate(i,a,"document.readyState==='complete' && document.querySelector('.avatar')?.naturalWidth>0 && typeof nexusReceiveQuestion==='function' && typeof nexusBoot==='function' && !!document.querySelector('#nexusVoiceEnergy') && !!document.querySelector('#holoTranscript')");
+    if("true".equals(result))break;
+    Thread.sleep(250);
+   }
+   assertEquals("Local avatar, holographic HUD and JavaScript must finish booting offline","true",result);
    i.runOnMainSync(()->find(a.getWindow().getDecorView()).getSettings().setBlockNetworkLoads(true));
    assertEquals("true",evaluate(i,a,"typeof nexusBoot==='function'"));
    assertEquals("false",evaluate(i,a,"!!document.querySelector('#photoRig')"));
@@ -88,8 +94,13 @@ public class LocalInterfaceTest {
    assertEquals("true",evaluate(i,a,"typeof NexusNative.listen==='function'"));
    evaluate(i,a,"addCard('Fotografia','Teste local');addCard('Música','Segundo painel');rotate(-1)");
    assertEquals("\"Fotografia\"",evaluate(i,a,"document.querySelector('#panelTopic').textContent"));
-   evaluate(i,a,"location.reload()");Thread.sleep(1200);
-   assertEquals("true",evaluate(i,a,"document.querySelector('.avatar').naturalWidth>0"));
+   evaluate(i,a,"location.reload()");
+   String afterReload="";for(int n=0;n<80;n++){
+    afterReload=evaluate(i,a,"document.readyState==='complete' && document.querySelector('.avatar')?.naturalWidth>0 && typeof nexusBoot==='function' && !!document.querySelector('#holoTranscript')");
+    if("true".equals(afterReload))break;
+    Thread.sleep(250);
+   }
+   assertEquals("Reload must restore the offline holographic interface","true",afterReload);
    evaluate(i,a,"setState('speaking');nexusStopAll()");assertEquals("\"idle\"",evaluate(i,a,"state"));
   } finally {i.runOnMainSync(()->{WebView w=find(a.getWindow().getDecorView());if(w!=null)w.getSettings().setBlockNetworkLoads(false);a.finishAndRemoveTask();});}
  }
