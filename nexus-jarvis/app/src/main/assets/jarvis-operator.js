@@ -3,7 +3,7 @@
 'use strict';
 const native=!!window.Android;
 const $=id=>document.getElementById(id);
-const normalize=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[?!.,;:]+/g,' ').replace(/\s+/g,' ').trim();
+const normalize=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[?!.,;:\-]+/g,' ').replace(/\s+/g,' ').trim();
 const wake=x=>String(x||'').trim().replace(/^(?:ola\s+|hey\s+|ei\s+)?(?:nexus|nexos|jarvis)[,!: ]*/i,'').trim();
 let pending=null,queue=[],sid=0;
 const searches=new Map();
@@ -36,9 +36,10 @@ function contact(txt){
 function when(text,now=new Date()){
  const n=normalize(text),relative=n.match(/daqui a\s+(\d+)\s*(minutos?|horas?|dias?)/);
  if(relative){const i=+relative[1],unit=relative[2].startsWith('minuto')?60000:relative[2].startsWith('hora')?3600000:86400000;return i>0&&i<10000?now.getTime()+i*unit:null}
- const m=n.match(/\b(?:as|pelas|para as)\s+(\d{1,2})(?:\s*(?:h|horas|:|e)\s*(\d{1,2}|meia))?(?:\s+(?:da|de)\s+(manha|tarde|noite))?/);
+ const digits={zero:0,uma:1,um:1,duas:2,dois:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezasseis:16,dezassete:17,dezoito:18,dezanove:19,vinte:20};
+ const m=n.match(/\b(?:as|pelas|para as)\s+(\d{1,2}|uma|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezasseis|dezoito|vinte)(?:\s*(?:h|horas|:|e)\s*(\d{1,2}|meia|quinze|trinta))?(?:\s+(?:da|de)\s+(manha|tarde|noite))?/);
  if(!m)return null;
- let hour=+m[1],minute=!m[2]?0:m[2]==='meia'?30:+m[2];
+ let hour=/^\d+$/.test(m[1])?+m[1]:digits[m[1]],minute=!m[2]?0:m[2]==='meia'||m[2]==='trinta'?30:m[2]==='quinze'?15:+m[2];
  if((m[3]==='tarde'||m[3]==='noite')&&hour<12)hour+=12;
  if(hour>23||minute>59)return null;
  const d=new Date(now);
@@ -55,7 +56,7 @@ function reminder(text){
  let title=wake(text).replace(/^(?:lembra[\s-]*me|lembrete|avisa[\s-]*me|recorda[\s-]*me|cria um lembrete|criar lembrete|agenda um lembrete|quero um lembrete)\s*/i,'')
  .replace(/\b(?:depois de amanh[aã]|amanh[aã]|hoje)\b/gi,'')
  .replace(/daqui a\s+\d+\s+(?:minutos?|horas?|dias?)/gi,'')
- .replace(/\b(?:[àa]s|pelas|para as)\s+\d{1,2}(?:\s*(?:h|horas|:|e)\s*(?:\d{1,2}|meia))?(?:\s+(?:da|de)\s+(?:manh[aã]|tarde|noite))?/gi,'')
+ .replace(/\b(?:[àa]s|pelas|para as)\s+(?:\d{1,2}|uma|duas|três|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quinze|vinte)(?:\s*(?:h|horas|:|e)\s*(?:\d{1,2}|meia))?(?:\s+(?:da|de)\s+(?:manh[aã]|tarde|noite))?/gi,'')
  .replace(/^\s*(?:de|para|que)\s+/i,'').replace(/\s+/g,' ').trim()||'Compromisso pessoal';
  return{type:'reminder',title,at:when(text)};
 }
