@@ -1,4 +1,4 @@
-name: NEXUS JARVIS 1.2 APK build
+name: NEXUS JARVIS 1.3 APK build
 on:
   push:
     branches: [nexus-jarvis-build]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: nexus-jarvis-1.2
+  group: nexus-jarvis-v1.3
   cancel-in-progress: true
 jobs:
   build-apk:
@@ -26,25 +26,36 @@ jobs:
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
-      - name: Compile and lint Android APK
+      - name: Check embedded JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('nexus-jarvis/app/src/main/assets/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script\b[^>]*>(.*?)</script\s*>',html,flags=re.I|re.S)
+          assert scripts,"No JavaScript found in UI"
+          Path('/tmp/nexus-jarvis-ui.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/nexus-jarvis-ui.js
+      - name: Compile Android and Lint
         run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
       - name: Prepare APK and checksum
         run: |
-          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.2.0.apk
-          sha256sum NEXUS-JARVIS-Android-v1.2.0.apk > SHA256SUMS-JARVIS.txt
-      - name: Save built APK
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.3.0.apk
+          sha256sum NEXUS-JARVIS-Android-v1.3.0.apk > SHA256SUMS-JARVIS-1.3.txt
+      - name: Save APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NEXUS-JARVIS-APK-v1.2.0
+          name: NEXUS-JARVIS-APK-v1.3.0
           path: |
-            NEXUS-JARVIS-Android-v1.2.0.apk
-            SHA256SUMS-JARVIS.txt
+            NEXUS-JARVIS-Android-v1.3.0.apk
+            SHA256SUMS-JARVIS-1.3.txt
           if-no-files-found: error
-      - name: Publish separate JARVIS prerelease
+      - name: Publish v1.3 prerelease only after successful checks
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create nexus-jarvis-v1.2.0 NEXUS-JARVIS-Android-v1.2.0.apk SHA256SUMS-JARVIS.txt \
+          gh release create nexus-jarvis-v1.3.0 NEXUS-JARVIS-Android-v1.3.0.apk SHA256SUMS-JARVIS-1.3.txt \
             --target "$GITHUB_SHA" --prerelease \
-            --title "NEXUS JARVIS Android 1.2.0 - independent app" \
-            --notes "APK experimental da aplicação separada pt.nexus.jarvis. Compilação e Android Lint realizados em CI. Comandos de voz e integração com o telemóvel ainda não validados num dispositivo físico. Instala-se ao lado da versão pt.nexus.assistant. APK assinado com chave debug; preserva dados locais antes de reinstalar."
+            --title "NEXUS JARVIS Android 1.3.0 - contacts and Shopify read-only reports" \
+            --notes "Versão experimental pt.nexus.jarvis, separada do NEXUS holográfico pt.nexus.assistant. Nova consulta de contactos e relatórios de encomendas Shopify, mediante permissões e configuração manual de um token read_orders. Compilação, análise estática e sintaxe JavaScript validadas no GitHub Actions. Não foram executados testes físicos no telemóvel nem testes reais à Shopify, voz e contactos. APK assinado com chave debug."

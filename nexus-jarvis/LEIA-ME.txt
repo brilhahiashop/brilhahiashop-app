@@ -1,0 +1,45 @@
+NEXUS JARVIS v1.3.0 - projeto Android (compila sozinho no GitHub)
+
+COMO OBTER O APK (sem instalar nada no PC)
+1. Entre em github.com > "+" > New repository. Nome: nexus-jarvis. Privado ou público.
+2. Clique em "uploading an existing file" e arraste TODO o conteúdo desta pasta
+   (incluindo a pasta escondida .github). Clique em Commit changes.
+   - Se a pasta .github não subir: Add file > Create new file, escreva como nome
+     .github/workflows/build.yml e cole o conteúdo do ficheiro build.yml que acompanha o zip.
+3. Separador "Actions" > "Compilar APK NEXUS" > Run workflow (ou espere ~5 minutos
+   que arranca sozinho ao enviar os ficheiros).
+4. Quando ficar a verde, abra a execução e, em "Artifacts", descarregue NEXUS-APK.
+   Descomprima e instale o NEXUS-Android-v1.3.0.apk no telemóvel
+   (permita "instalar apps desconhecidas" quando o Android pedir).
+5. Ao abrir, aceite o microfone e a localização.
+
+Se a compilação falhar, abra a execução com o X vermelho, copie as últimas linhas do erro
+e envie-as ao Claude para corrigir.
+
+COMANDOS DE VOZ (funcionam só na app)
+- "Liga / desliga a lanterna"
+- "Acorda-me às 7" / "Alarme para as 6 e meia"
+- "Temporizador de 10 minutos"
+- "Liga para o 912 345 678" (abre o marcador; confirma a chamada no ecrã)
+- "Leva-me ao ..." (abre o mapa)
+- "Aumenta / baixa o volume"
+- "Abre o WhatsApp" (qualquer app instalada), "Abre as definições de wifi"
+- "Pesquisa ... no Google"
+- "Liga ao João" / "Liga para a Maria" (procura nos contactos e abre o marcador; na primeira vez
+  o Android pede autorização para ler os contactos, depois repita o pedido)
+- "Como vão as minhas vendas" / "vendas de ontem" / "vendas da semana" / "vendas deste mês"
+  (precisa de configurar a Shopify, ver abaixo)
+- "Como está o tempo (no Porto)"
+- Tudo o resto vai para a IA gratuita (Pollinations). Definições dentro da app.
+
+LIGAR A SHOPIFY (quando a loja estiver ativa)
+1. Na Shopify, crie uma app com permissão SÓ de leitura de encomendas (read_orders) e copie o
+   token de acesso da Admin API (começa por shpat_).
+2. Na app NEXUS: Definições > endereço da loja (ex.: minhaloja.myshopify.com) e o token > Guardar.
+3. O token fica guardado só no telemóvel. Não use um token com permissão de escrita.
+Se a Shopify recusar, diga ao Claude a mensagem que a app der.
+
+NÃO INCLUÍDO
+- Redes sociais (Facebook, Instagram): as plataformas só dão acesso por API a apps aprovadas
+  por elas, por isso não há ligação direta. "Abre o Facebook" e "pesquisa ... no Google" funcionam.
+- Notícias em direto: abre RTP, Público e Google Notícias no ecrã.

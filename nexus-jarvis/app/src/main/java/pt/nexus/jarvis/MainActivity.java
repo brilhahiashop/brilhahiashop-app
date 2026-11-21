@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
+import android.provider.ContactsContract;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationManager;
@@ -294,6 +296,39 @@ public class MainActivity extends Activity {
                         .putExtra(AlarmClock.EXTRA_SKIP_UI, true);
                 startActivity(i);
             } catch (Exception e) { }
+        }
+
+        @JavascriptInterface
+        public String findContact(String name) {
+            try {
+                if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+                    runOnUiThread(() -> requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, 2));
+                    return "perm";
+                }
+                String want = norm(name);
+                String exact = null, part = null;
+                Cursor c = getContentResolver().query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                                ContactsContract.CommonDataKinds.Phone.NUMBER},
+                        null, null, null);
+                if (c == null) return "";
+                try {
+                    while (c.moveToNext()) {
+                        String n = c.getString(0);
+                        String num = c.getString(1);
+                        if (n == null || num == null) continue;
+                        String nn = norm(n);
+                        if (nn.equals(want)) { exact = n + "|" + num; break; }
+                        if (part == null && nn.contains(want)) part = n + "|" + num;
+                    }
+                } finally {
+                    c.close();
+                }
+                return exact != null ? exact : (part != null ? part : "");
+            } catch (Exception e) {
+                return "";
+            }
         }
 
         @JavascriptInterface

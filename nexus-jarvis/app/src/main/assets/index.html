@@ -123,6 +123,11 @@ function phoneCmd(raw){
     Android.timer(s,'NEXUS');return'Temporizador definido para '+n+' '+m[2]+'.'}
   if((m=t.match(/\b(?:liga|ligar|telefona|chama)\b.*?((?:\d\s?){9,})/))){
     const d=m[1].replace(/\D/g,'');Android.dial(d);return'A abrir o marcador com o número '+d.split('').join(' ')+'. Confirme a chamada no ecrã.'}
+  if((m=t.match(/^(?:liga|ligar|telefona|telefonar|chama)\s+(?:para\s+)?(?:ao\s+|à\s+|o\s+|a\s+)?(.+)$/))&&!/lanterna|wi-?fi|bluetooth|dados|volume|\bsom\b/.test(m[1])){
+    const nome=m[1].trim(),r=Android.findContact(nome);
+    if(r==='perm')return'Preciso de autorização para ler os contactos. Autorize no ecrã e repita o pedido.';
+    if(!r)return'Não encontrei o contacto '+nome+'.';
+    const p=r.split('|');Android.dial(p[1]);return'A abrir o marcador para '+p[0]+'. Confirme a chamada no ecrã.'}
   if((m=t.match(/(?:leva-me|navegar|navega|direções|direcoes|como chego|como chegar|rota)\s+(?:ao|à|até|para|a)?\s+(.+)/))){
     Android.navigate(m[1]);return'A abrir o mapa para '+m[1]+'.'}
   if((m=t.match(/(aumenta|sobe|baixa|diminui|reduz)\s+(?:o\s+)?volume/))){
@@ -160,6 +165,36 @@ const closeWin=()=>{clearTimeout(winTimer);$('#win').classList.remove('open')};
 $('#wx').onclick=closeWin;
 function el(tag,txt,cls){const e=document.createElement(tag);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
 function links(list){const r=el('div',null,'row');list.forEach(([t,u])=>{const a=el('a',t);a.href=u;a.target='_blank';a.rel='noopener';r.append(a)});return r}
+
+/* ---------- vendas Shopify (GraphQL, só leitura) ---------- */
+async function salesReport(text){
+  const shop=store.get('shop','').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''),tok=store.get('stoken','').trim(),ver=store.get('sver','2026-07').trim();
+  if(!NATIVE)throw new Error('As vendas só funcionam na app Android.');
+  if(!shop||!tok)throw new Error('Ainda não ligou a loja. Em Definições, indique o endereço da loja e o token da Shopify.');
+  const t=text.toLowerCase(),now=new Date();
+  let from=new Date(now.getFullYear(),now.getMonth(),now.getDate()),to=null,label='hoje';
+  if(/ontem/.test(t)){to=from;from=new Date(from.getTime()-864e5);label='ontem'}
+  else if(/semana/.test(t)){from=new Date(from.getTime()-6*864e5);label='nos últimos 7 dias'}
+  else if(/m[êe]s/.test(t)){from=new Date(now.getFullYear(),now.getMonth(),1);label='este mês'}
+  const iso=d=>d.toISOString().replace(/\.\d+Z$/,'Z');
+  const q='created_at:>='+iso(from)+(to?' created_at:<'+iso(to):'');
+  let after=null,n=0,sum=0,cur='',pages=0;
+  do{
+    const r=await netFetch('https://'+shop+'/admin/api/'+ver+'/graphql.json',{method:'POST',
+      headers:{'Content-Type':'application/json','X-Shopify-Access-Token':tok},
+      body:JSON.stringify({query:'query($q:String!,$a:String){orders(first:100,query:$q,after:$a){pageInfo{hasNextPage endCursor}nodes{currentTotalPriceSet{shopMoney{amount currencyCode}}}}}',variables:{q:q,a:after}})});
+    if(r.status===401||r.status===403)throw new Error('A Shopify recusou o acesso. Verifique o token e a permissão de leitura de encomendas.');
+    if(!r.ok)throw new Error('A Shopify respondeu com o erro '+r.status+'. Verifique o endereço da loja.');
+    const d=await r.json();
+    if(d.errors)throw new Error('A Shopify devolveu um erro: '+((d.errors[0]&&d.errors[0].message)||'desconhecido')+'.');
+    const o=d.data.orders;
+    o.nodes.forEach(x=>{n++;const m=x.currentTotalPriceSet.shopMoney;sum+=parseFloat(m.amount);cur=m.currencyCode});
+    after=o.pageInfo.hasNextPage?o.pageInfo.endCursor:null;
+  }while(after&&++pages<5);
+  const money=sum.toLocaleString('pt-PT',{style:'currency',currency:cur||'EUR'});
+  const txt=n===0?'Sem encomendas '+label+'.':n+(n===1?' encomenda ':' encomendas ')+label+', num total de '+money+'.';
+  return{title:'Vendas — '+label,text:txt,spoken:txt};
+}
 
 /* ---------- tempo (Open-Meteo, grátis e sem chave) ---------- */
 const WMO=c=>c===0?'céu limpo':c<4?'parcialmente nublado':c<49?'nevoeiro':c<68?'chuva':c<78?'neve':c<83?'aguaceiros':'trovoada';
@@ -209,6 +244,7 @@ async function callAI(messages){
 
 /* ---------- intenção -> janela ---------- */
 function intent(t){t=t.toLowerCase();
+  if(/vendas|encomendas|quanto vendi|fatura[çc]/.test(t))return'vendas';
   if(/como est[áa] o tempo|tempo (em|hoje|amanh|para)|meteorolog|previs[ãa]o|vai chover|chuva|temperatura/.test(t))return'tempo';
   if(/facebook/.test(t))return'facebook';
   if(/not[íi]cias/.test(t))return'noticias';
@@ -219,6 +255,11 @@ async function ask(text){
   text=text.trim();if(!text||busy)return;
   if(NATIVE){const pc=phoneCmd(text);if(pc){setState('idle',pc);speak(pc);return}}
   busy=true;setState('thinking','«'+text+'»');
+  if(intent(text)==='vendas'){
+    try{const r=await salesReport(text);showWin(r.title,b=>b.append(el('p',r.text)));busy=false;speak(r.spoken)}
+    catch(e){busy=false;const mm=e.message||'Erro ao consultar as vendas.';setState('idle',mm);showWin('Vendas',b=>b.append(el('p',mm)));speak(mm)}
+    return;
+  }
   const kind=intent(text);let extra='',wd=null;
   try{
     if(kind==='tempo'){try{wd=await getWeather(text);extra=weatherCtx(wd)}catch(e){extra='Não foi possível obter dados meteorológicos reais; di-lo ao utilizador.'}}
@@ -293,9 +334,11 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
   f('s-url','Endereço da IA (compatível com OpenAI)',cfg.url);
   f('s-model','Modelo',cfg.model);
   f('s-key','Chave (opcional, se o serviço a exigir)',cfg.key,'password');
+  f('s-shop','Loja Shopify (ex.: minhaloja.myshopify.com)',store.get('shop',''));
+  f('s-stoken','Token de acesso da Shopify (só leitura de encomendas)',store.get('stoken',''),'password');
   const r=el('div',null,'row');r.style.marginTop='16px';
   const s=el('button','Guardar');
-  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);store.set('key',cfg.key);closeWin()};
+  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());store.set('stoken',$('#s-stoken').value.trim());closeWin()};
   const n=el('button','Limpar conversa');n.onclick=()=>{history=[];closeWin();cap('Conversa limpa.')};
   r.append(s,n);b.append(r);
 });
