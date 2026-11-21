@@ -17,6 +17,8 @@ const hud={
  state(s,msg){
   const labels={idle:'DISPONÍVEL',listening:'A OUVIR',thinking:'A PENSAR',speaking:'A RESPONDER',researching:'A PESQUISAR'};
   document.body.dataset.nxState=s;
+  const person=el('nexusHuman');if(person)person.dataset.mode=s;
+  if(window.humanRig)window.humanRig.state(s);
   phase.textContent='NEXUS · '+(labels[s]||'ONLINE');
   if(s==='idle')setEnergy(0);
   if(s==='listening'&&msg)el('hudRequest').textContent=msg;
@@ -38,6 +40,7 @@ const hud={
   const active=document.createElement('mark');active.textContent=spokenText.slice(s,e);
   const post=document.createElement('span');post.textContent=spokenText.slice(e);
   transcript.textContent='';transcript.append(pre,active,post);
+  if(window.humanRig)window.humanRig.speech(spokenText.slice(s,e));
   result.hidden=false;
  },
  greet(){

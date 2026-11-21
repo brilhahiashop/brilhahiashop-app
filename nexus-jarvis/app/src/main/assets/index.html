@@ -67,7 +67,12 @@ label{display:block;margin:10px 0 4px;color:var(--mute);font-size:14px}
   <div class="hud-state" role="status"><span class="hud-dot" aria-hidden="true"></span><span id="hudPhase">NEXUS · DISPONÍVEL</span></div>
   <div class="hud-canvas">
     <div class="hud-ring one" aria-hidden="true"></div><div class="hud-ring two" aria-hidden="true"></div><div class="hud-ring three" aria-hidden="true"></div>
-    <button class="orb" id="orb" aria-label="Tocar para falar com o Nexus"></button>
+    <div id="nexusHuman" class="nexus-human">
+<img src="avatar-human.webp" id="humanAvatar" class="human-avatar" alt="Assistente humanoide holográfico">
+<canvas id="humanRig" aria-hidden="true"></canvas>
+<div class="holo-scan" aria-hidden="true"></div>
+<button class="orb" id="orb" aria-label="Tocar no NEXUS para falar"></button>
+</div>
   </div>
   <div id="cap" aria-live="polite">Toque no holograma e fale comigo.</div>
   <div class="hud-energy" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -82,7 +87,7 @@ label{display:block;margin:10px 0 4px;color:var(--mute);font-size:14px}
   <button type="button" data-action="apps">▦ Apps</button>
   <button type="button" data-action="research">⌕ Pesquisar</button>
   <button type="button" data-action="weather">◉ Tempo</button>
-  <button type="button" data-action="sales">€ Vendas</button>
+  
   <button type="button" data-action="settings">⚙ Sistema</button>
 </nav>
 <footer>
@@ -289,7 +294,9 @@ function intent(t){t=t.toLowerCase();
 }
 
 async function ask(text){
-  text=text.trim();if(!text||busy)return;if(window.nxHUD)window.nxHUD.request(text);
+  text=text.trim();if(!text||busy)return;
+  if(NATIVE&&window.JarvisOperator&&window.JarvisOperator.handle(text))return;
+  if(window.nxHUD)window.nxHUD.request(text);
   if(NATIVE){const pc=phoneCmd(text);if(pc){setState('idle',pc);speak(pc);return}}
   busy=true;setState('thinking','«'+text+'»');
   if(intent(text)==='vendas'){
@@ -374,6 +381,7 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
   f('s-key','Chave (opcional, se o serviço a exigir)',cfg.key,'password');
   f('s-shop','Loja Shopify (ex.: minhaloja.myshopify.com)',store.get('shop',''));
   f('s-stoken','Token de acesso da Shopify (só leitura de encomendas)',store.get('stoken',''),'password');
+  if(window.JarvisOperator)window.JarvisOperator.addSettings(b);
   const r=el('div',null,'row');r.style.marginTop='16px';
   const s=el('button','Guardar');
   s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);const aiSaved=store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());const shopSaved=store.set('stoken',$('#s-stoken').value.trim());if(!aiSaved||!shopSaved){b.append(el('p','Não foi possível guardar a chave em segurança. Verifique o Android Keystore e tente novamente.'));return;}closeWin()};
@@ -382,5 +390,7 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
 });
 </script>
 <script src="hud-upgrade.js"></script>
+<script src="human-face.js"></script>
+<script src="jarvis-operator.js"></script>
 </body>
 </html>
