@@ -20,7 +20,7 @@ function align(){
 }
 function draw(openness){
  if(!align())return;const W=canvas.width,H=canvas.height;
- const x=W*.407,y=H*.675,w=W*.19,h=H*.075;
+ const x=W*.407,y=H*.500,w=W*.19,h=H*.075;
  ctx.clearRect(0,0,W,H);if(openness<.065)return;
  ctx.save();ctx.beginPath();ctx.ellipse(x+w/2,y+h/2,w*.48,h*.52,0,0,Math.PI*2);ctx.clip();
  ctx.drawImage(img,x,y,w,h,x,y,w,h);
