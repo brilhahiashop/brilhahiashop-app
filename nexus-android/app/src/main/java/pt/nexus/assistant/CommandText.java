@@ -11,7 +11,7 @@ final class CommandText {
   if(compact.matches("maps|mapas|googlemaps"))return "maps";if(compact.matches("chrome|googlechrome|navegador"))return "chrome";if(compact.matches("email|gmail|correio"))return "gmail";return s;
  }
  static String requestedApp(String phrase){String q=clean(phrase).replaceFirst("^(?:(?:ola|hey|ei)\\s+)?(?:nexus|nexos|anexos)\\s*","").replaceFirst("^(?:por favor\\s+)?(?:(?:podes|poderias|consegues)\\s+)?","");
-  // An explicitly named familiar app in a colloquial "como se abre" request may be opened; generic how-to questions remain informational.\n  q=q.replaceFirst("^(?:como e que se abre|como se abre|como abrir)\\s+(?:(?:o meu|a minha|o|a)\\s+)?(face|facebook|insta|instagram|whatsapp|whats|tiktok|youtube|spotify|maps|chrome|gmail)\\s*$","abre $1");\n  if(q.matches(".*\\b(instala|instalar|desinstala|desinstalar|conta|registo|codigo|password|senha)\\b.*"))return null;
+  // An explicitly named familiar app in a colloquial "como se abre" request may be opened; generic how-to questions remain informational.\n  q=q.replaceFirst("^(?:como e que se abre|como se abre|como abrir)\\s+(?:o meu|a minha)\\s+(face|facebook|insta|instagram|whatsapp|whats|tiktok|youtube|spotify|maps|chrome|gmail)\\s*$","abre $1");\n  if(q.matches(".*\\b(instala|instalar|desinstala|desinstalar|conta|registo|codigo|password|senha)\\b.*"))return null;
   if(!q.matches("^(abre|abrir|abres|inicia|iniciar|lanca|lancar|arranca|entra|entrar|muda para|vai para|ir para)\\s+.+"))return null;
   String target=q.replaceFirst("^(abre|abrir|abres|inicia|iniciar|lanca|lancar|arranca|entra|entrar|muda para|vai para|ir para)\\s+","").replaceFirst("^(?:(?:o|a|no|na|para|app|aplicacao)\\s+)+","");
   if(target.isEmpty()||target.length()>70)return null;return app(target);
