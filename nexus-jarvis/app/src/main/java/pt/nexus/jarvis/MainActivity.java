@@ -20,6 +20,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
@@ -50,6 +51,7 @@ public class MainActivity extends Activity {
     private TextToSpeech tts;
     private boolean ttsReady = false;
     private boolean torchOn = false;
+    private NexusContacts personal;
     private volatile boolean webReady = false;
     private volatile boolean greeted = false;
     private long lastRmsAt = 0;
@@ -57,6 +59,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        personal = new NexusContacts(this);
         getWindow().setStatusBarColor(0xFF070B14);
         getWindow().setNavigationBarColor(0xFF070B14);
 
@@ -99,6 +102,7 @@ public class MainActivity extends Activity {
                 if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
                     tts.setLanguage(new Locale("pt"));
                 }
+                configureVoice();
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) { }
                     @Override public void onDone(String id) { js("window.nx.ttsDone()"); }
@@ -115,6 +119,38 @@ public class MainActivity extends Activity {
         requestPermissions(new String[]{
                 Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+    }
+
+    private void configureVoice() {
+        try {
+            tts.setSpeechRate(.94f);
+            tts.setPitch(.98f);
+            String preferred=getSharedPreferences("voice",0).getString("preferred","");
+            Voice chosen=null;
+            for (Voice v:tts.getVoices()) {
+                if(!"pt".equals(v.getLocale().getLanguage()))continue;
+                if(!preferred.isEmpty()&&preferred.equals(v.getName())){chosen=v;break;}
+                if(chosen==null||(v.getLocale().toLanguageTag().equalsIgnoreCase("pt-PT")
+                    &&!chosen.getLocale().toLanguageTag().equalsIgnoreCase("pt-PT")))chosen=v;
+                else if(v.getLocale().toLanguageTag().equalsIgnoreCase("pt-PT")&&
+                    chosen.getLocale().toLanguageTag().equalsIgnoreCase("pt-PT")&&
+                    v.getQuality()>chosen.getQuality())chosen=v;
+            }
+            if(chosen!=null)tts.setVoice(chosen);
+        }catch(Exception ignored){}
+    }
+
+    private void status(String message) {
+        js("window.nxActionStatus&&window.nxActionStatus("+JSONObject.quote(message)+")");
+    }
+    @Override @SuppressWarnings("deprecation")
+    protected void onActivityResult(int request,int result,Intent data) {
+        super.onActivityResult(request,result,data);
+        if(request==NexusContacts.PICK_CONTACT&&personal!=null)personal.onPicked(result,data);
+    }
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
+        super.onRequestPermissionsResult(request,permissions,grants);
+        if(request==NexusContacts.REQUEST_CALL&&personal!=null)personal.onCallPermissionResult(grants);
     }
 
     private void maybeGreet() {
@@ -196,6 +232,63 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public boolean storeSecret(String slot, String value) {
             return SecretStore.save(MainActivity.this, slot, value);
+        }
+        @JavascriptInterface public String availableVoices() {
+            JSONArray voices=new JSONArray();
+            try {
+                if(tts!=null&&ttsReady)for(Voice v:tts.getVoices()) {
+                    if(!"pt".equals(v.getLocale().getLanguage()))continue;
+                    voices.put(new JSONObject().put("name",v.getName())
+                        .put("language",v.getLocale().toLanguageTag()).put("quality",v.getQuality())
+                        .put("network",v.isNetworkConnectionRequired()));
+                }
+            }catch(Exception ignored){}
+            return voices.toString();
+        }
+        @JavascriptInterface public void chooseVoice(String name) {
+            runOnUiThread(()->{
+                try {
+                    for(Voice voice:tts.getVoices())if(voice.getName().equals(name)
+                            &&voice.getLocale().getLanguage().equals("pt")) {
+                        tts.setVoice(voice);
+                        getSharedPreferences("voice",0).edit().putString("preferred",name).apply();
+                        status("Voz portuguesa selecionada.");
+                        return;
+                    }
+                }catch(Exception ignored){}
+                status("Esta voz não está disponível no telemóvel.");
+            });
+        }
+        @JavascriptInterface public void contactAction(String kind,String alias,String body) {
+            runOnUiThread(()->{
+                if(personal==null){status("Contactos indisponíveis.");return;}
+                if("call".equals(kind))personal.call(alias,MainActivity.this::status);
+                else if("whatsapp".equals(kind)||"sms".equals(kind))
+                    personal.compose(alias,body,"whatsapp".equals(kind),MainActivity.this::status);
+            });
+        }
+        @JavascriptInterface public String createReminder(String title,long timestamp) {
+            String reply=NexusReminders.add(MainActivity.this,title,timestamp);
+            if(android.os.Build.VERSION.SDK_INT>=33&&!NexusReminders.canNotify(MainActivity.this)) {
+                runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},872));
+                return reply+" Autoriza as notificações para receber o aviso.";
+            }
+            return reply;
+        }
+        @JavascriptInterface public String listReminders() {
+            return NexusReminders.list(MainActivity.this);
+        }
+        @JavascriptInterface public void research(String id,String query) {
+            new Thread(()->{
+                try {
+                    NexusResearch.Result result=NexusResearch.search(query);
+                    JSONObject data=new JSONObject().put("query",query).put("sources",result.sources)
+                        .put("checkedAt",result.checkedAt);
+                    js("window.nxResearch&&window.nxResearch("+JSONObject.quote(id)+","+JSONObject.quote(data.toString())+")");
+                }catch(Exception e){
+                    js("window.nxResearch&&window.nxResearch("+JSONObject.quote(id)+",\"{}\")");
+                }
+            }).start();
         }
         @JavascriptInterface public String listApps() {
             try {
