@@ -67,11 +67,11 @@
   let count=reduced?normalized.length:Math.ceil(normalized.length*Math.max(autoProgress,spoken));
   if(!count&&normalized.length)count=Math.min(55,normalized.length);
   const visible=normalized.slice(0,count);
-  if(visible!==lastVisible){transcript.replaceChildren(fragment(visible));lastVisible=visible;}
+  if(visible!==lastVisible){transcript.textContent=visible;lastVisible=visible;}
   transcript.classList.toggle('streaming',count<normalized.length);
  }
  function sources(arr){
-  feed.replaceChildren();
+  feed.textContent='';
   const actual=Array.isArray(arr)?arr.filter(s=>s&&typeof s.url==='string'&&/^https:\/\//i.test(s.url)).slice(0,6):[];
   if(!actual.length)return;
   const label=document.createElement('span');label.className='holo-feed-title';label.textContent=actual.length+' FONTES REAIS';feed.append(label);
