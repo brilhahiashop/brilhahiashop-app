@@ -1,4 +1,4 @@
-name: NEXUS JARVIS 1.4 holographic APK
+name: NEXUS JARVIS 1.5 holographic APK
 on:
   push:
     branches: [nexus-jarvis-enhanced]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: nexus-jarvis-v1.4
+  group: nexus-jarvis-v1.5
   cancel-in-progress: true
 jobs:
   build-and-validate:
@@ -29,6 +29,8 @@ jobs:
       - name: JavaScript syntax and voice command tests
         run: |
           node --check nexus-jarvis/app/src/main/assets/hud-upgrade.js
+          node --check nexus-jarvis/app/src/main/assets/human-face.js
+          node --check nexus-jarvis/app/src/main/assets/jarvis-operator.js
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -38,26 +40,26 @@ jobs:
           Path('/tmp/nexus-jarvis-inline.js').write_text('\n'.join(scripts))
           PY
           node --check /tmp/nexus-jarvis-inline.js
-          node --test nexus-jarvis/tests/command-regression.test.cjs
+          node --test nexus-jarvis/tests/command-regression.test.cjs nexus-jarvis/tests/voice-actions.test.cjs
       - name: Compile Android and run lint
         run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
       - name: Prepare APK and SHA256
         run: |
-          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.4.0.apk
-          sha256sum NEXUS-JARVIS-Android-v1.4.0.apk > SHA256SUMS-JARVIS-1.4.txt
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.5.0.apk
+          sha256sum NEXUS-JARVIS-Android-v1.5.0.apk > SHA256SUMS-JARVIS-1.5.txt
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NEXUS-JARVIS-APK-v1.4.0
+          name: NEXUS-JARVIS-APK-v1.5.0
           path: |
-            NEXUS-JARVIS-Android-v1.4.0.apk
-            SHA256SUMS-JARVIS-1.4.txt
+            NEXUS-JARVIS-Android-v1.5.0.apk
+            SHA256SUMS-JARVIS-1.5.txt
           if-no-files-found: error
       - name: Publish prerelease after validation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create nexus-jarvis-v1.4.0 NEXUS-JARVIS-Android-v1.4.0.apk SHA256SUMS-JARVIS-1.4.txt \
+          gh release create nexus-jarvis-v1.5.0 NEXUS-JARVIS-Android-v1.5.0.apk SHA256SUMS-JARVIS-1.5.txt \
             --target "$GITHUB_SHA" --prerelease \
-            --title "NEXUS JARVIS Android 1.4.0 - holographic HUD and security" \
-            --notes "Versao beta independente: HUD holografico interativo, atalhos, apps instaladas, TTS com progresso sincronizado, energia do microfone, saudacao inicial, tokens AES-256-GCM no Android Keystore. Inclui comandos e Shopify read-only da v1.3. Compilacao, Android lint, sintaxe JS e testes de comandos executados. Ainda nao foi testado num telemovel fisico. Escuta apenas com a app aberta, sem servico continuo em segundo plano. APK debug-signed."
+            --title "NEXUS JARVIS Android 1.5.0 - human avatar and multi-action assistant" \
+            --notes "Beta 1.5: avatar humano com movimentos aproximados dos labios ligados a eventos TTS, voz pt-PT selecionavel, chamada por nome com associacao de alcunhas, composicao de WhatsApp/SMS com confirmacao de envio, lembretes locais, pesquisa multi-fonte com fontes reais e comandos por voz encadeados ate 4 passos (passos externos exigem continuar). Mantem app pt.nexus.jarvis e tokens cifrados por Android Keystore. Compilacao, Lint e testes de interpretacao executados em CI. NAO significa controlo universal de todas as apps, envio automatico no WhatsApp, lipsync cinematografico, pesquisa de toda a Web ou testes em dispositivo fisico. APK debug-signed."
