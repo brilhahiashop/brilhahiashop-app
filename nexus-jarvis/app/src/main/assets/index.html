@@ -163,7 +163,24 @@ function phoneCmd(raw){
   }
   return null;
 }
-const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+/* Token Shopify e chave de IA cifrados em repouso no Android Keystore. */
+const store={
+ get(k,d){try{
+   if(NATIVE&&(k==='stoken'||k==='key')){
+     const safe=Android.loadSecret(k);if(safe)return safe;
+     const legacy=localStorage.getItem(k);
+     if(legacy&&Android.storeSecret(k,legacy)){localStorage.removeItem(k);return legacy}
+     return d;
+   }
+   const v=localStorage.getItem(k);return v===null?d:v;
+ }catch(e){return d}},
+ set(k,v){try{
+   if(NATIVE&&(k==='stoken'||k==='key')){
+     const ok=Android.storeSecret(k,String(v));if(ok)localStorage.removeItem(k);return ok;
+   }
+   localStorage.setItem(k,v);return true;
+ }catch(e){return false}}
+};
 const cfg={url:store.get('url','https://gen.pollinations.ai/v1/chat/completions'),model:store.get('model','openai'),key:store.get('key','')};
 let hands=store.get('hands','0')==='1',busy=false,listening=false,rec=null,history=[];
 
@@ -190,6 +207,7 @@ async function salesReport(text){
   const shop=store.get('shop','').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''),tok=store.get('stoken','').trim(),ver=store.get('sver','2026-07').trim();
   if(!NATIVE)throw new Error('As vendas só funcionam na app Android.');
   if(!shop||!tok)throw new Error('Ainda não ligou a loja. Em Definições, indique o endereço da loja e o token da Shopify.');
+  if(!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(shop))throw new Error('Use apenas o domínio oficial da Shopify terminado em .myshopify.com.');
   const t=text.toLowerCase(),now=new Date();
   let from=new Date(now.getFullYear(),now.getMonth(),now.getDate()),to=null,label='hoje';
   if(/ontem/.test(t)){to=from;from=new Date(from.getTime()-864e5);label='ontem'}

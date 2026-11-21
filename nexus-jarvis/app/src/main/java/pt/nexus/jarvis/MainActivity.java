@@ -29,6 +29,7 @@ import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -39,6 +40,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -48,6 +50,9 @@ public class MainActivity extends Activity {
     private TextToSpeech tts;
     private boolean ttsReady = false;
     private boolean torchOn = false;
+    private volatile boolean webReady = false;
+    private volatile boolean greeted = false;
+    private long lastRmsAt = 0;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -63,6 +68,8 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
 
         web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebViewClient(new WebViewClient() {
@@ -70,10 +77,18 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 String u = r.getUrl().toString();
                 if (u.startsWith("file:///android_asset/")) return false;
+                if (!u.startsWith("https://") && !u.startsWith("http://")) return true;
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u)));
                 } catch (Exception e) { /* ignorar */ }
                 return true;
+            }
+            @Override public void onPageFinished(WebView v, String url) {
+                super.onPageFinished(v, url);
+                if (url.startsWith("file:///android_asset/")) {
+                    webReady = true;
+                    maybeGreet();
+                }
             }
         });
         web.loadUrl("file:///android_asset/index.html");
@@ -88,14 +103,27 @@ public class MainActivity extends Activity {
                     @Override public void onStart(String id) { }
                     @Override public void onDone(String id) { js("window.nx.ttsDone()"); }
                     @Override public void onError(String id) { js("window.nx.ttsDone()"); }
+                    @Override public void onRangeStart(String id, int start, int end, int frame) {
+                        js("window.nxHUD&&window.nxHUD.spoken(" + start + "," + end + ")");
+                    }
                 });
                 ttsReady = true;
+                maybeGreet();
             }
         });
 
         requestPermissions(new String[]{
                 Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+    }
+
+    private void maybeGreet() {
+        runOnUiThread(() -> {
+            if (webReady && ttsReady && !greeted) {
+                greeted = true;
+                web.evaluateJavascript("window.nxHUD&&window.nxHUD.greet()", null);
+            }
+        });
     }
 
     private void js(final String code) {
@@ -123,7 +151,13 @@ public class MainActivity extends Activity {
             sr.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle p) { js("window.nx.stt('ready','')"); }
                 @Override public void onBeginningOfSpeech() { }
-                @Override public void onRmsChanged(float v) { }
+                @Override public void onRmsChanged(float v) {
+                    long now = android.os.SystemClock.uptimeMillis();
+                    if (now - lastRmsAt > 120 && !Float.isNaN(v) && !Float.isInfinite(v)) {
+                        lastRmsAt = now;
+                        js("window.nxHUD&&window.nxHUD.energy(" + v + ")");
+                    }
+                }
                 @Override public void onBufferReceived(byte[] bf) { }
                 @Override public void onEndOfSpeech() { }
                 @Override public void onEvent(int t, Bundle p) { }
@@ -157,6 +191,30 @@ public class MainActivity extends Activity {
 
     /* ---------- ponte JS <-> Android ---------- */
     private class Bridge {
+        @JavascriptInterface public String loadSecret(String slot) {
+            return SecretStore.read(MainActivity.this, slot);
+        }
+        @JavascriptInterface public boolean storeSecret(String slot, String value) {
+            return SecretStore.save(MainActivity.this, slot, value);
+        }
+        @JavascriptInterface public String listApps() {
+            try {
+                PackageManager pm = getPackageManager();
+                Intent q = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+                TreeSet<String> labels = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+                for (ResolveInfo a : pm.queryIntentActivities(q, 0)) {
+                    String label = String.valueOf(a.loadLabel(pm)).trim();
+                    if (!label.isEmpty()) labels.add(label);
+                }
+                JSONArray out = new JSONArray();
+                int count = 0;
+                for (String label : labels) {
+                    out.put(label);
+                    if (++count >= 180) break;
+                }
+                return out.toString();
+            } catch (Exception e) { return "[]"; }
+        }
 
         @JavascriptInterface
         public void listen() { runOnUiThread(() -> startListening()); }
@@ -204,7 +262,10 @@ public class MainActivity extends Activity {
                 int status;
                 String out;
                 try {
-                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    URL endpoint = new URL(url);
+                    if (!"https".equalsIgnoreCase(endpoint.getProtocol()))
+                        throw new SecurityException("Ligação não HTTPS bloqueada");
+                    HttpURLConnection c = (HttpURLConnection) endpoint.openConnection();
                     c.setRequestMethod(method);
                     c.setConnectTimeout(15000);
                     c.setReadTimeout(60000);

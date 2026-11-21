@@ -17,9 +17,10 @@
     </queries>
 
     <application
-        android:label="NEXUS"
+        android:label="NEXUS JARVIS"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity
             android:name=".MainActivity"
