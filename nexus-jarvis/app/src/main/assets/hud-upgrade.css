@@ -1,0 +1,43 @@
+
+/* NEXUS JARVIS 1.4 — native-responsive holographic dashboard. */
+body{background:radial-gradient(ellipse 60% 48% at 50% 37%,#10264d 0%,#070b16 60%,#040813 100%)!important}
+body::before{content:"";pointer-events:none;position:fixed;inset:0;background:linear-gradient(90deg,transparent 0 48%,#4beafa06 49% 51%,transparent 52%),repeating-linear-gradient(0deg,transparent 0 32px,#60b1ff08 33px 34px);z-index:0}
+header,main,footer,#quickActions{position:relative;z-index:1}
+header{background:#070d1dc7;border-bottom:1px solid #3c75ab25;backdrop-filter:blur(10px)}
+main{justify-content:center;gap:12px;padding:8px 18px;overflow:hidden}
+.hud-state{display:flex;align-items:center;justify-content:center;gap:12px;color:#9cc5f2;font:600 11px/1.4 system-ui;letter-spacing:.16em;min-height:19px;text-transform:uppercase}
+.hud-dot{width:7px;height:7px;border-radius:50%;background:#5df2c9;box-shadow:0 0 15px #5df2c9}
+.hud-canvas{position:relative;width:min(66vw,260px);max-height:min(32vh,255px);aspect-ratio:1;display:grid;place-items:center;flex-shrink:1}
+.hud-ring{pointer-events:none;position:absolute;border-radius:50%;border:1px solid #4dcffa55;box-shadow:0 0 22px #1878ba11,inset 0 0 19px #167cb329}
+.hud-ring.one{inset:0;border-style:dashed;animation:hud-spin 30s linear infinite}
+.hud-ring.two{inset:9%;border-left:2px solid #53cfff;border-right-color:transparent;animation:hud-spin 16s linear infinite reverse}
+.hud-ring.three{inset:17%;border-top:2px solid #71dcf6;border-bottom-color:transparent;animation:hud-spin 9s linear infinite}
+@keyframes hud-spin{to{transform:rotate(360deg)}}
+.hud-canvas .orb{width:55%;min-width:86px;max-width:170px;aspect-ratio:1;z-index:2;box-shadow:0 0 32px #46bfff72,0 0 75px #236cff36,inset -11px -12px 27px #0c2b5599;transition:box-shadow .25s ease,filter .25s ease}
+.hud-canvas .orb:focus-visible{outline:2px solid #fff;outline-offset:5px}
+.hud-canvas .orb::before,.hud-canvas .orb::after{inset:-11px}
+.hud-canvas:has(.orb.listening) .hud-ring{border-color:#3ee0c8b3;box-shadow:0 0 19px #3ee0c822}
+.hud-canvas:has(.orb.thinking) .hud-ring{border-color:#a78bfab3}
+.hud-canvas:has(.orb.speaking) .hud-ring{border-color:#ffb44db3}
+#cap{min-height:2.5em;font-size:14px;line-height:1.45;color:#b6cbeb;max-width:min(92vw,480px);text-align:center}
+.hud-energy{display:flex;align-items:center;justify-content:center;gap:5px;height:24px}
+.hud-energy i{display:block;width:4px;min-height:4px;height:calc(5px + 17px * var(--a,0.2));background:#4fdce5;border-radius:4px;box-shadow:0 0 8px #43d9f580;transition:height .1s ease}
+body[data-nx-state="speaking"] .hud-energy i{background:#ffb44d;box-shadow:0 0 10px #ffb44d80}
+body[data-nx-state="thinking"] .hud-energy i{background:#ae96ff}
+.hud-result{width:min(100%,480px);border:1px solid #4488ba66;border-radius:16px;background:linear-gradient(140deg,#0d1e36ee,#0a1529ee);padding:11px 14px;box-shadow:0 0 22px #17487731;overflow:hidden;min-height:80px;flex-shrink:2}
+.hud-result[hidden]{display:none}
+.hud-result-head{display:flex;align-items:center;justify-content:space-between;color:#80ddeb;font:600 10px system-ui;letter-spacing:.16em;margin-bottom:5px}
+.hud-result p{font-size:13px;line-height:1.5;color:#e0efff;margin:0;max-height:5.8em;overflow:auto;white-space:pre-wrap}
+.hud-result mark{background:#70b5ec33;color:#fff;font-weight:650;border-radius:4px}
+.hud-result button{border:1px solid #315a85;background:#10203a;color:#d7eaff;font-size:11px;padding:3px 8px;border-radius:8px}
+#quickActions{display:flex;gap:8px;overflow-x:auto;padding:8px 14px 9px;scrollbar-width:none;border-top:1px solid #3c75ab2a;border-bottom:1px solid #3c75ab2a;background:#081426b5}
+#quickActions::-webkit-scrollbar{display:none}
+#quickActions button{flex:1 0 auto;min-width:72px;min-height:39px;background:#102039;border:1px solid #315a82a3;border-radius:11px;color:#d0eeff;font-size:12px;padding:7px 10px;white-space:nowrap}
+#quickActions button:active,#quickActions button:focus-visible{background:#1a4268;outline:1px solid #60c7ff}
+footer{padding:10px 14px 12px}
+.win{background:#0b1425f7;border-color:#4d92bf80;backdrop-filter:blur(16px);max-height:65dvh}
+.win-b .app-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.win-b .app-picker button{width:100%;padding:10px 8px;text-align:left;border-radius:10px;border:1px solid #315577;background:#10213a}
+@media(max-height:740px){.hud-canvas{width:min(52vw,195px)}main{gap:7px}.hud-result{min-height:50px;padding:8px 12px}.hud-result p{max-height:3em}header{padding:9px 12px}}
+@media(max-height:540px){.hud-canvas{width:min(35vw,140px);max-height:32vh}.hud-state{display:none}.hud-energy{height:15px}.hud-result{display:none!important}#quickActions{padding:5px 8px}}
+@media(prefers-reduced-motion:reduce){.hud-ring,.hud-canvas .orb{animation:none!important}}

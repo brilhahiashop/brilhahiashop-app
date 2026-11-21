@@ -53,6 +53,7 @@ label{display:block;margin:10px 0 4px;color:var(--mute);font-size:14px}
 .win-b input[type=text],.win-b input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:10px 12px;font:inherit}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+<link rel="stylesheet" href="hud-upgrade.css">
 </head>
 <body>
 <header>
@@ -63,9 +64,27 @@ label{display:block;margin:10px 0 4px;color:var(--mute);font-size:14px}
   </div>
 </header>
 <main>
-  <button class="orb" id="orb" aria-label="Tocar para falar com o Nexus"></button>
-  <div id="cap" aria-live="polite">Toque no orbe e fale comigo.</div>
+  <div class="hud-state" role="status"><span class="hud-dot" aria-hidden="true"></span><span id="hudPhase">NEXUS · DISPONÍVEL</span></div>
+  <div class="hud-canvas">
+    <div class="hud-ring one" aria-hidden="true"></div><div class="hud-ring two" aria-hidden="true"></div><div class="hud-ring three" aria-hidden="true"></div>
+    <button class="orb" id="orb" aria-label="Tocar para falar com o Nexus"></button>
+  </div>
+  <div id="cap" aria-live="polite">Toque no holograma e fale comigo.</div>
+  <div class="hud-energy" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="hudRequest" class="hud-state">ASSISTENTE PESSOAL</div>
+  <section class="hud-result" id="hudResult" aria-label="Resultado da resposta" hidden>
+    <div class="hud-result-head"><span id="hudResultLabel">RESPOSTA REAL</span><button type="button" id="hudExpand">Expandir / Fechar</button></div>
+    <p id="hudTranscript" aria-live="polite"></p>
+  </section>
 </main>
+<nav id="quickActions" aria-label="Atalhos do NEXUS">
+  <button type="button" data-action="talk">✦ Falar</button>
+  <button type="button" data-action="apps">▦ Apps</button>
+  <button type="button" data-action="research">⌕ Pesquisar</button>
+  <button type="button" data-action="weather">◉ Tempo</button>
+  <button type="button" data-action="sales">€ Vendas</button>
+  <button type="button" data-action="settings">⚙ Sistema</button>
+</nav>
 <footer>
   <input id="txt" type="text" placeholder="Ou escreva aqui…" autocomplete="off" enterkeyhint="send">
   <button id="send">Enviar</button>
@@ -95,7 +114,7 @@ window.nx={
   ttsDone(){setState('idle','Toque no orbe e fale comigo.');if(hands&&!busy)setTimeout(listen,500)},
   stt(type,txt){
     if(type==='ready'){listening=true;setState('listening','A ouvir…')}
-    else if(type==='partial'){cap('«'+txt+'»')}
+    else if(type==='partial'){cap('«'+txt+'»');if(window.nxHUD)window.nxHUD.liveText(txt)}
     else if(type==='final'){listening=false;if(txt.trim())ask(txt);else{setState('idle','Não ouvi nada. Toque no orbe para tentar de novo.');if(hands&&!busy)setTimeout(listen,800)}}
     else if(type==='error'){listening=false;
       if(txt==='permission'||txt==='9'){hands=false;syncHands();setState('idle','Sem permissão para o microfone. Autorize-o nas definições do Android.')}
@@ -151,14 +170,14 @@ let hands=store.get('hands','0')==='1',busy=false,listening=false,rec=null,histo
 const SYS=`És o NEXUS, um assistente pessoal por voz. Responde sempre em português de Portugal (pt-PT), nunca em português do Brasil, com tom formal e respeitoso. As respostas devem ser detalhadas e bem explicadas, mas escritas para serem ditas em voz alta: sem markdown, sem asteriscos, sem listas com símbolos, em frases claras. Ajudas o utilizador a melhorar a sua vida financeira e a escolher e montar um negócio próprio, preferindo sempre soluções gratuitas ou de custo muito baixo. Se não souberes algo, di-lo com honestidade em vez de inventar.`;
 
 /* ---------- estado visual ---------- */
-function setState(s,msg){$('#orb').className='orb '+(s==='idle'?'':s);if(msg!==undefined)$('#cap').textContent=msg}
+function setState(s,msg){$('#orb').className='orb '+(s==='idle'?'':s);if(msg!==undefined)$('#cap').textContent=msg;if(window.nxHUD)window.nxHUD.state(s,msg)}
 const cap=t=>$('#cap').textContent=t;
 
 /* ---------- janelas ---------- */
 let winTimer;
 function showWin(title,build){
   const w=$('#win');clearTimeout(winTimer);
-  const fill=()=>{$('#wt').textContent=title;const b=$('#wb');b.replaceChildren();build(b);w.classList.add('open')};
+  const fill=()=>{$('#wt').textContent=title;const b=$('#wb');b.textContent='';build(b);w.classList.add('open')};
   if(w.classList.contains('open')){w.classList.remove('open');winTimer=setTimeout(fill,260)}else fill();
 }
 const closeWin=()=>{clearTimeout(winTimer);$('#win').classList.remove('open')};
@@ -252,7 +271,7 @@ function intent(t){t=t.toLowerCase();
 }
 
 async function ask(text){
-  text=text.trim();if(!text||busy)return;
+  text=text.trim();if(!text||busy)return;if(window.nxHUD)window.nxHUD.request(text);
   if(NATIVE){const pc=phoneCmd(text);if(pc){setState('idle',pc);speak(pc);return}}
   busy=true;setState('thinking','«'+text+'»');
   if(intent(text)==='vendas'){
@@ -283,6 +302,7 @@ let ptVoice=null;
 function pickVoice(){const v=speechSynthesis.getVoices();ptVoice=v.find(x=>x.lang==='pt-PT')||v.find(x=>x.lang.toLowerCase().startsWith('pt'))||null}
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 function speak(text){
+  if(window.nxHUD)window.nxHUD.answer(text);
   if(NATIVE){const c=text.replace(/[*#_`>~]/g,' ').replace(/\s+/g,' ').trim();setState('speaking','A falar… toque para interromper.');Android.speak(c);return}
   if(!('speechSynthesis' in window)){setState('idle','');return}
   speechSynthesis.cancel();
@@ -343,5 +363,6 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
   r.append(s,n);b.append(r);
 });
 </script>
+<script src="hud-upgrade.js"></script>
 </body>
 </html>
