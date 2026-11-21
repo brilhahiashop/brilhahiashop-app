@@ -70,7 +70,7 @@ final class NexusContacts {
   if(pendingAlias.length()<2){callback.accept("Diz o nome da pessoa a quem queres ligar.");return;}
   String known=read(pendingAlias);
   if(known.isEmpty())chooseContact();
-  else confirmCall(known);
+  else callNow(known);
  }
  void message(String natural,Consumer<String> callback){
   answer=callback;
