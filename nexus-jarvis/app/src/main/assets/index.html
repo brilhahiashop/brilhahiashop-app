@@ -376,7 +376,7 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
   f('s-stoken','Token de acesso da Shopify (só leitura de encomendas)',store.get('stoken',''),'password');
   const r=el('div',null,'row');r.style.marginTop='16px';
   const s=el('button','Guardar');
-  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());store.set('stoken',$('#s-stoken').value.trim());closeWin()};
+  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);const aiSaved=store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());const shopSaved=store.set('stoken',$('#s-stoken').value.trim());if(!aiSaved||!shopSaved){b.append(el('p','Não foi possível guardar a chave em segurança. Verifique o Android Keystore e tente novamente.'));return;}closeWin()};
   const n=el('button','Limpar conversa');n.onclick=()=>{history=[];closeWin();cap('Conversa limpa.')};
   r.append(s,n);b.append(r);
 });

@@ -13,7 +13,7 @@ main{justify-content:center;gap:12px;padding:8px 18px;overflow:hidden}
 .hud-ring.two{inset:9%;border-left:2px solid #53cfff;border-right-color:transparent;animation:hud-spin 16s linear infinite reverse}
 .hud-ring.three{inset:17%;border-top:2px solid #71dcf6;border-bottom-color:transparent;animation:hud-spin 9s linear infinite}
 @keyframes hud-spin{to{transform:rotate(360deg)}}
-.hud-canvas .orb{width:55%;min-width:86px;max-width:170px;aspect-ratio:1;z-index:2;box-shadow:0 0 32px #46bfff72,0 0 75px #236cff36,inset -11px -12px 27px #0c2b5599;transition:box-shadow .25s ease,filter .25s ease}
+.hud-canvas .orb{background:radial-gradient(circle at 31% 23%,#e4faff,#6fc1f0 19%,#3365d5 58%,#111c5d 100%);width:55%;min-width:86px;max-width:170px;aspect-ratio:1;z-index:2;box-shadow:0 0 32px #46bfff72,0 0 75px #236cff36,inset -11px -12px 27px #0c2b5599;transition:box-shadow .25s ease,filter .25s ease}
 .hud-canvas .orb:focus-visible{outline:2px solid #fff;outline-offset:5px}
 .hud-canvas .orb::before,.hud-canvas .orb::after{inset:-11px}
 .hud-canvas:has(.orb.listening) .hud-ring{border-color:#3ee0c8b3;box-shadow:0 0 19px #3ee0c822}
@@ -41,3 +41,8 @@ footer{padding:10px 14px 12px}
 @media(max-height:740px){.hud-canvas{width:min(52vw,195px)}main{gap:7px}.hud-result{min-height:50px;padding:8px 12px}.hud-result p{max-height:3em}header{padding:9px 12px}}
 @media(max-height:540px){.hud-canvas{width:min(35vw,140px);max-height:32vh}.hud-state{display:none}.hud-energy{height:15px}.hud-result{display:none!important}#quickActions{padding:5px 8px}}
 @media(prefers-reduced-motion:reduce){.hud-ring,.hud-canvas .orb{animation:none!important}}
+
+/* Fallbacks for older Android WebViews without color-mix. */
+.hud-canvas .orb.listening{background:radial-gradient(circle at 30% 22%,#d7fff5,#3ee0c8 35%,#087c7b 100%)}
+.hud-canvas .orb.thinking{background:radial-gradient(circle at 30% 22%,#f2dfff,#a78bfa 35%,#4c2895 100%)}
+.hud-canvas .orb.speaking{background:radial-gradient(circle at 30% 22%,#ffefd2,#ffb44d 35%,#a55518 100%)}
