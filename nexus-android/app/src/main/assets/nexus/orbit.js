@@ -24,7 +24,7 @@
   slots.forEach(button=>{
    const offset=Number(button.dataset.slot);
    const target=opts[modulo(current+offset)];
-   button.replaceChildren();
+   button.textContent='';
    const ico=document.createElement('span');ico.className='orbit-icon';ico.textContent=target.icon;
    const name=document.createElement('span');name.className='orbit-name';name.textContent=target.title;
    button.append(ico,name);
