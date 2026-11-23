@@ -6,6 +6,9 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.telephony.SmsManager;
+import android.app.PendingIntent;
+import java.util.ArrayList;
 import android.provider.ContactsContract;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
@@ -21,11 +24,12 @@ import java.util.regex.*;
 
 /** Opt-in contact selection and action confirmation. Contacts never go to the NEXUS server. */
 final class NexusContacts {
- static final int PICK_CONTACT=740,REQUEST_CALL=741;
+ static final int PICK_CONTACT=740,REQUEST_CALL=741,REQUEST_SMS=742;
  private static final String PREF="nexus_private_aliases_v1",KEY="nexus-personal-contacts-v1";
  private final MainActivity host;
  private String pendingAlias,pendingMessage;
  private String awaitingNumber;
+ private String awaitingSmsNumber,awaitingSmsBody;
  private boolean whatsappMode=false;
  private Consumer<String> answer;
  NexusContacts(MainActivity host){this.host=host;}
@@ -153,26 +157,95 @@ final class NexusContacts {
   }catch(Exception e){if(answer!=null)answer.accept("Não foi possível abrir o telefone.");}
  }
  private void composeMessage(String number){
-  String message=pendingMessage==null?"":pendingMessage;
+  String message=pendingMessage==null?"":pendingMessage.trim();
   String alias=pendingAlias;
-  new AlertDialog.Builder(host)
-   .setTitle(whatsappMode?"NEXUS · WhatsApp":"NEXUS · SMS")
-   .setMessage("Para "+alias+":\n\n"+(message.isEmpty()?"(sem texto ainda)":message)+"\n\nO envio só fica concluído quando carregares em Enviar na aplicação.")
-   .setPositiveButton("Abrir mensagem",(dialog,which)->{
-     try{
-       if(whatsappMode){
-         String phone=number.replaceAll("[^0-9]","");
-         if(phone.length()==9&&phone.startsWith("9"))phone="351"+phone;
-         Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("https://wa.me/"+phone+"?text="+Uri.encode(message)));
-         host.startActivity(intent);
-       }else{
-         Intent sms=new Intent(Intent.ACTION_SENDTO,Uri.parse("smsto:"+number));
-         sms.putExtra("sms_body",message);
-         host.startActivity(sms);
-       }
-       if(answer!=null)answer.accept("Abri a conversa. Confirma o envio na aplicação.");
-     }catch(Exception e){if(answer!=null)answer.accept("Não consegui abrir a aplicação de mensagens.");}
-   }).setNegativeButton("Cancelar",null).show();
-  if(answer!=null)answer.accept("Mensagem para "+alias+" preparada. Confirma no ecrã.");
+  if(whatsappMode){
+    new AlertDialog.Builder(host).setTitle("NEXUS · WhatsApp")
+      .setMessage("Para "+alias+":\n\n"+(message.isEmpty()?"Sem texto ainda":message)
+        +"\n\nO WhatsApp só enviará a mensagem depois de confirmares na própria aplicação.")
+      .setPositiveButton("Abrir WhatsApp",(dialog,which)->{
+        String digits=number.replaceAll("[^0-9]","");
+        if(digits.length()==9&&digits.startsWith("9"))digits="351"+digits;
+        try{
+          host.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://wa.me/"+digits+"?text="+Uri.encode(message))));
+          if(answer!=null)answer.accept("Abri o WhatsApp com a mensagem. Toca em Enviar para concluir.");
+        }catch(Exception e){if(answer!=null)answer.accept("Não consegui abrir o WhatsApp.");}
+      }).setNegativeButton("Cancelar",null).show();
+  }else{
+    if(message.isEmpty()){
+      openSmsComposer(number,"");
+      return;
+    }
+    if(message.length()>900){
+      if(answer!=null)answer.accept("A mensagem é demasiado longa para envio SMS direto. Vou abrir a aplicação Mensagens para a reveres.");
+      openSmsComposer(number,message);
+      return;
+    }
+    // Distinguish sending an SMS from simply opening a draft in the user's SMS app.
+    new AlertDialog.Builder(host).setTitle("NEXUS · Enviar SMS")
+      .setMessage("Destinatário: "+alias+"\n\nMensagem ditada:\n"+message
+        +"\n\nEnviar como SMS? Poderão aplicar-se custos do teu tarifário.")
+      .setPositiveButton("Enviar SMS",(dialog,which)->sendSmsOrFallback(number,message))
+      .setNeutralButton("Abrir Mensagens",(dialog,which)->openSmsComposer(number,message))
+      .setNegativeButton("Cancelar",null).show();
+    if(answer!=null)answer.accept("Confirma o texto no ecrã e escolhe Enviar SMS ou Abrir Mensagens.");
+  }
+ }
+ private void openSmsComposer(String number,String message){
+  try{
+    Intent draft=new Intent(Intent.ACTION_SENDTO,Uri.parse("smsto:"+number));
+    if(message!=null&&!message.isEmpty())draft.putExtra("sms_body",message);
+    host.startActivity(draft);
+    if(answer!=null)answer.accept(
+      message==null||message.isEmpty()?"Abri a aplicação Mensagens.":"Abri a aplicação Mensagens com o texto. Toca em Enviar para concluir.");
+  }catch(Exception e){
+    if(answer!=null)answer.accept("Não consegui abrir a aplicação Mensagens do Android.");
+  }
+ }
+ private void sendSmsOrFallback(String number,String message){
+  if(!host.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEPHONY_MESSAGING)){
+    if(answer!=null)answer.accept("Este equipamento não suporta o envio direto de SMS. Vou abrir Mensagens.");
+    openSmsComposer(number,message);return;
+  }
+  if(host.checkSelfPermission(Manifest.permission.SEND_SMS)!=PackageManager.PERMISSION_GRANTED){
+    awaitingSmsNumber=number;awaitingSmsBody=message;
+    host.requestPermissions(new String[]{Manifest.permission.SEND_SMS},REQUEST_SMS);
+    return;
+  }
+  sendSms(number,message);
+ }
+ void onSmsPermissionResult(int[] grants){
+  if(awaitingSmsNumber==null)return;
+  String number=awaitingSmsNumber,body=awaitingSmsBody;
+  awaitingSmsNumber=null;awaitingSmsBody=null;
+  if(grants.length>0&&grants[0]==PackageManager.PERMISSION_GRANTED){
+    sendSms(number,body);
+  }else{
+    if(answer!=null)answer.accept("Sem permissão para enviar SMS automaticamente. Vou abrir Mensagens com o texto preparado.");
+    openSmsComposer(number,body);
+  }
+ }
+ @SuppressWarnings("deprecation")
+ private void sendSms(String number,String message){
+  try{
+    SmsManager manager=SmsManager.getDefault();
+    ArrayList<String> parts=manager.divideMessage(message);
+    if(parts.isEmpty())throw new IllegalArgumentException("Mensagem vazia");
+    int ref=(int)(System.currentTimeMillis()&0x3fffffff);
+    ArrayList<PendingIntent> pending=new ArrayList<>();
+    for(int i=0;i<parts.size();i++){
+      Intent sent=new Intent(host,NexusSmsStatusReceiver.class).setAction(NexusSmsStatusReceiver.ACTION)
+        .putExtra("ref",ref).putExtra("part",i).putExtra("total",parts.size());
+      pending.add(PendingIntent.getBroadcast(host,ref+i,sent,PendingIntent.FLAG_ONE_SHOT|PendingIntent.FLAG_IMMUTABLE));
+    }
+    if(parts.size()==1)manager.sendTextMessage(number,null,message,pending.get(0),null);
+    else manager.sendMultipartTextMessage(number,null,parts,pending,null);
+    // Open the real SMS conversation without pre-filling the text, preventing duplicate sends.
+    openSmsComposer(number,"");
+    if(answer!=null)answer.accept("O envio SMS foi solicitado. Vou confirmar o resultado que o Android comunicar.");
+  }catch(Exception e){
+    if(answer!=null)answer.accept("Não foi possível enviar o SMS diretamente. Vou abrir Mensagens para confirmares o envio.");
+    openSmsComposer(number,message);
+  }
  }
 }

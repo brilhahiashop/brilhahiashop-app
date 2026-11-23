@@ -23,7 +23,7 @@ function contact(txt){
   if(part){body=target.slice(part.index+part[0].length);target=target.slice(0,part.index)}
   target=target.replace(/^(?:ao|a|o|minha|meu|para)\s+/,'').trim();
   if(!target)return null;
-  return {type:'message',who:target,body,channel:message[1]==='sms'||/\bsms\b/.test(raw)?'sms':'whatsapp'};
+  return {type:'message',who:target,body,channel:message[1]==='whatsapp'||/\bwhatsapp\b/.test(raw)?'whatsapp':'sms'};
  }
  const call=raw.match(/^(?:liga|ligar|telefona|telefonar|faz uma chamada|quero ligar|preciso de ligar)\s+(?:para\s+|ao\s+|a\s+|o\s+)?(.+)$/);
  if(call){
@@ -133,7 +133,7 @@ function handle(text){
   const p=pending;pending=null;
   if(p.type==='dictate'){
     Android.contactAction(p.channel,p.who,u);
-    feedback('Abri a preparação da mensagem para '+p.who+'.',false);return true;
+    feedback('Preparei a mensagem para '+p.who+'. Confirma o envio no ecrã.',false);return true;
   }
   if(p.type==='time'){
     const at=when(u);
@@ -164,12 +164,12 @@ window.JarvisOperator={handle,when,parse,addSettings,continue(){const next=queue
 function init(){
  const bar=$('quickActions');if(!bar)return;
  const next=document.createElement('button');next.id='nxNextStep';next.type='button';next.hidden=true;next.onclick=()=>window.JarvisOperator.continue();bar.append(next);
- const wa=document.createElement('button');wa.type='button';wa.textContent='✉ Mensagem';
+ const wa=document.createElement('button');wa.type='button';wa.textContent='✉ SMS';
  wa.onclick=()=>{
-  showWin('Mensagem por voz',b=>{
+  showWin('SMS por voz',b=>{
     const i=document.createElement('input');i.type='text';i.placeholder='Nome do contacto, por exemplo Amor';
     const send=document.createElement('button');send.type='button';send.textContent='Ditar mensagem';
-    send.onclick=()=>{const who=i.value.trim();if(!who)return;closeWin();run({type:'message',who,channel:'whatsapp',body:''})};
+    send.onclick=()=>{const who=i.value.trim();if(!who)return;closeWin();run({type:'message',who,channel:'sms',body:''})};
     b.append(i,send);
   });
  };bar.append(wa);

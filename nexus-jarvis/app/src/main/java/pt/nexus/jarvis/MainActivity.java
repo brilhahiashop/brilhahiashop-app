@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
     private boolean ttsReady = false;
     private boolean torchOn = false;
     private NexusContacts personal;
+    private static java.lang.ref.WeakReference<MainActivity> current=new java.lang.ref.WeakReference<>(null);
     private volatile boolean webReady = false;
     private volatile boolean greeted = false;
     private long lastRmsAt = 0;
@@ -60,6 +61,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         personal = new NexusContacts(this);
+        current=new java.lang.ref.WeakReference<>(this);
         getWindow().setStatusBarColor(0xFF070B14);
         getWindow().setNavigationBarColor(0xFF070B14);
 
@@ -140,6 +142,10 @@ public class MainActivity extends Activity {
         }catch(Exception ignored){}
     }
 
+    static void reportSmsResult(String message){
+        MainActivity activity=current.get();
+        if(activity!=null)activity.status(message);
+    }
     private void status(String message) {
         js("window.nxActionStatus&&window.nxActionStatus("+JSONObject.quote(message)+")");
     }
@@ -150,7 +156,10 @@ public class MainActivity extends Activity {
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
         super.onRequestPermissionsResult(request,permissions,grants);
-        if(request==NexusContacts.REQUEST_CALL&&personal!=null)personal.onCallPermissionResult(grants);
+        if(personal!=null){
+            if(request==NexusContacts.REQUEST_CALL)personal.onCallPermissionResult(grants);
+            if(request==NexusContacts.REQUEST_SMS)personal.onSmsPermissionResult(grants);
+        }
     }
 
     private void maybeGreet() {
@@ -529,6 +538,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if(current.get()==this)current.clear();
         if (sr != null) { sr.destroy(); sr = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         super.onDestroy();
