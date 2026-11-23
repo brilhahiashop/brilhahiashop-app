@@ -167,11 +167,12 @@ final class NexusResearch {
   return norm(q).matches(".*\\b(noticias|noticia|noticiario|ultimas|jornal|atualidade|manchetes)\\b.*");
  }
  private static boolean isRecipe(String q){return norm(q).matches(".*\\b(receita|receitas|cozinhar|bolo|frango|arroz|peixe|bacalhau|comida)\\b.*");}
- static Result search(String request){
+ static Result search(String request){return search(request,false);}
+ static Result search(String request,boolean forceRefresh){
   String q=bound(request==null?"":request.trim(),230);
   Result empty=new Result(q);if(q.length()<2)return empty;
   String key=norm(q);
-  synchronized(CACHE){CacheEntry e=CACHE.get(key);if(e!=null&&System.currentTimeMillis()-e.moment<(needsRecentSources(q)?75000:240000))return e.value;}
+  if(!forceRefresh)synchronized(CACHE){CacheEntry e=CACHE.get(key);if(e!=null&&System.currentTimeMillis()-e.moment<(needsRecentSources(q)?75000:240000))return e.value;}
   String search=relevanceQuery(q);
   boolean news=isNews(q),recipe=isRecipe(q);
   ExecutorService pool=Executors.newFixedThreadPool(4);

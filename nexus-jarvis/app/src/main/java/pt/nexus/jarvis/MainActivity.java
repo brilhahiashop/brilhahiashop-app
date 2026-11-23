@@ -15,6 +15,7 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.AlarmClock;
+import android.provider.CalendarContract;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -125,8 +126,11 @@ public class MainActivity extends Activity {
 
     private void configureVoice() {
         try {
-            tts.setSpeechRate(.94f);
-            tts.setPitch(.98f);
+            android.content.SharedPreferences settings=getSharedPreferences("voice",0);
+            float rate=Math.max(.72f,Math.min(1.28f,settings.getFloat("rate",.94f)));
+            float pitch=Math.max(.75f,Math.min(1.25f,settings.getFloat("pitch",.98f)));
+            tts.setSpeechRate(rate);
+            tts.setPitch(pitch);
             String preferred=getSharedPreferences("voice",0).getString("preferred","");
             Voice chosen=null;
             for (Voice v:tts.getVoices()) {
@@ -271,6 +275,20 @@ public class MainActivity extends Activity {
                 status("Esta voz não está disponível no telemóvel.");
             });
         }
+        @JavascriptInterface public String currentVoiceProfile(){
+            android.content.SharedPreferences p=getSharedPreferences("voice",0);
+            try{return new JSONObject().put("rate",p.getFloat("rate",.94f)).put("pitch",p.getFloat("pitch",.98f)).toString();}
+            catch(Exception e){return "{}";}
+        }
+        @JavascriptInterface public void setVoiceProfile(float rate,float pitch){
+            final float safeRate=Math.max(.72f,Math.min(1.28f,rate));
+            final float safePitch=Math.max(.75f,Math.min(1.25f,pitch));
+            runOnUiThread(()->{
+                getSharedPreferences("voice",0).edit().putFloat("rate",safeRate).putFloat("pitch",safePitch).apply();
+                if(ttsReady&&tts!=null){tts.setSpeechRate(safeRate);tts.setPitch(safePitch);}
+                status("Ajustei o ritmo e a entoação da voz.");
+            });
+        }
         @JavascriptInterface public void contactAction(String kind,String alias,String body) {
             runOnUiThread(()->{
                 if(personal==null){status("Contactos indisponíveis.");return;}
@@ -299,17 +317,34 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String listReminders() {
             return NexusReminders.list(MainActivity.this);
         }
-        @JavascriptInterface public void research(String id,String query) {
+        @JavascriptInterface public void research(String id,String query) {doResearch(id,query,false);}
+        @JavascriptInterface public void researchFresh(String id,String query) {doResearch(id,query,true);}
+        private void doResearch(String id,String query,boolean fresh){
             new Thread(()->{
                 try {
-                    NexusResearch.Result result=NexusResearch.search(query);
+                    NexusResearch.Result result=NexusResearch.search(query,fresh);
                     JSONObject data=new JSONObject().put("query",query).put("sources",result.sources)
                         .put("checkedAt",result.checkedAt);
                     js("window.nxResearch&&window.nxResearch("+JSONObject.quote(id)+","+JSONObject.quote(data.toString())+")");
                 }catch(Exception e){
                     js("window.nxResearch&&window.nxResearch("+JSONObject.quote(id)+",\"{}\")");
                 }
-            }).start();
+            },"NEXUS-Research").start();
+        }
+        @JavascriptInterface public void addCalendarEvent(String title,long when,int minutes){
+            runOnUiThread(()->{
+                try{
+                    if(when<=System.currentTimeMillis()) {status("Escolhe uma data futura para o compromisso.");return;}
+                    long length=Math.max(15,Math.min(480,minutes));
+                    Intent i=new Intent(Intent.ACTION_INSERT)
+                        .setData(CalendarContract.Events.CONTENT_URI)
+                        .putExtra(CalendarContract.Events.TITLE,title)
+                        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,when)
+                        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME,when+length*60000L);
+                    startActivity(i);
+                    status("Abri o calendário com o compromisso. Confirma a gravação no ecrã.");
+                }catch(Exception e){status("Não consegui abrir o calendário deste telemóvel.");}
+            });
         }
         @JavascriptInterface public String listApps() {
             try {
