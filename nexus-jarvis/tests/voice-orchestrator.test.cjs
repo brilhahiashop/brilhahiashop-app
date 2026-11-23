@@ -39,13 +39,23 @@ test('wife synonym uses already associated Amor alias',()=>{
 test('SMS is only sent after second voice confirmation',()=>{
  const s=makeHarness();
  assert.equal(s.operator.handle('Manda SMS para Amor a dizer chego às oito'),true);
- assert.deepEqual(JSON.parse(JSON.stringify(s.calls)),[['contact','sms_voice','amor','chego as oito']]);
+ assert.deepEqual(JSON.parse(JSON.stringify(s.calls)),[['contact','sms_voice','amor','chego às oito']]);
  assert.equal(s.calls.some(x=>x[0]==='confirmSms'),false);
  s.w.nxSmsReady('amor','chego as oito');
  assert.equal(s.operator.needsAnswer(),true);
  assert.equal(s.operator.handle('Sim, envia'),true);
  assert.equal(s.calls.filter(x=>x[0]==='confirmSms').length,1);
  assert.equal(s.calls.find(x=>x[0]==='confirmSms')[1],true);
+});
+test('SMS retains accents and punctuation from voice text',()=>{
+ const draft=makeHarness().operator.parse('Manda mensagem para Amor a dizer Olá, já cheguei à escola!');
+ assert.equal(draft.type,'message');
+ assert.equal(draft.body,'Olá, já cheguei à escola!');
+});
+test('reminder in words sets relative minutes',()=>{
+ const at=makeHarness().operator.when('daqui a quinze minutos');
+ const minutes=(at-Date.now())/60000;
+ assert.ok(minutes>14.9&&minutes<15.1);
 });
 test('SMS no cancels safely',()=>{
  const s=makeHarness();s.w.nxSmsReady('amor','olá');

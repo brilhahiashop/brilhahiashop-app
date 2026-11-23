@@ -17,7 +17,7 @@ function run(input) {
   openApp:n=>{calls.push(['openApp',n]);return'ok'},
   findContact:n=>{calls.push(['findContact',n]);return n==='joão'?'João|912345678':''}
  };
- const context={Android,encodeURIComponent};
+ const context={Android,encodeURIComponent,window:{JarvisOperator:null}};
  vm.runInNewContext(html.slice(start,end)+'\nthis.perform=phoneCmd;',context,{timeout:1000});
  return{answer:context.perform(input),calls};
 }
@@ -25,6 +25,7 @@ test('lanterna liga',()=>assert.equal(run('Liga a lanterna').calls[0][1],true));
 test('lanterna desliga',()=>assert.equal(run('Desliga a lanterna').calls[0][1],false));
 test('alarme com meia hora',()=>assert.equal(run('Acorda-me às 7 e meia').calls[0][2],30));
 test('temporizador',()=>assert.equal(run('Temporizador de 10 minutos').calls[0][1],600));
+test('temporizador com números por extenso',()=>assert.equal(run('Temporizador de quinze minutos').calls[0][1],900));
 test('abrir aplicação',()=>assert.equal(run('Abre o WhatsApp').calls[0][1],'whatsapp'));
 test('pesquisar na web',()=>assert.match(run('Pesquisa astronomia').calls[0][1],/google.com\/search/));
 test('contacto',()=>assert.equal(run('Liga ao joão').calls.at(-1)[1],'912345678'));

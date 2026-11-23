@@ -1,4 +1,4 @@
-name: NEXUS JARVIS VOZ 1.6.0 — Android build and voice regression
+name: NEXUS JARVIS VOZ 1.6.1 — Android build and voice regression
 on:
   push:
     branches: [nexus-jarvis-voice-automation]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: nexus-jarvis-voice-v1.6.0
+  group: nexus-jarvis-voice-v1.6.1
   cancel-in-progress: true
 jobs:
   build-apk:
@@ -45,20 +45,20 @@ jobs:
         run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
       - name: Prepare APK and checksum
         run: |
-          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-VOZ-v1.6.0.apk
-          sha256sum NEXUS-JARVIS-VOZ-v1.6.0.apk > SHA256SUMS-VOZ-v1.6.0.txt
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-VOZ-v1.6.1.apk
+          sha256sum NEXUS-JARVIS-VOZ-v1.6.1.apk > SHA256SUMS-VOZ-v1.6.1.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: NEXUS-JARVIS-VOZ-v1.6.0
+          name: NEXUS-JARVIS-VOZ-v1.6.1
           path: |
-            NEXUS-JARVIS-VOZ-v1.6.0.apk
-            SHA256SUMS-VOZ-v1.6.0.txt
+            NEXUS-JARVIS-VOZ-v1.6.1.apk
+            SHA256SUMS-VOZ-v1.6.1.txt
           if-no-files-found: error
       - name: Publish only after validations
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create nexus-jarvis-v1.6.0-voz NEXUS-JARVIS-VOZ-v1.6.0.apk SHA256SUMS-VOZ-v1.6.0.txt \
+          gh release create nexus-jarvis-v1.6.1-voz NEXUS-JARVIS-VOZ-v1.6.1.apk SHA256SUMS-VOZ-v1.6.1.txt \
             --target "$GITHUB_SHA" --prerelease \
-            --title "NEXUS JARVIS VOZ 1.6.0 — commands, reminders, research" \
-            --notes "Beta debug-signed independente pt.nexus.jarvis.voice. Novidades: SMS com confirmacao por voz, comandos encadeados, ditado, alcunhas para contactos, agenda com confirmacao no Android, lembretes locais, fontes de noticias com atualizacao manual, receitas e pesquisa multi-fonte, ajustes de voz portuguesa. Os SMS requerem permissao e consentimento; WhatsApp pede envio na app. A pesquisa nao e garantida em tempo real e a fala/labios dependem do Android. Compilacao e testes automatizados passam, mas nao equivale a testes de todas as funcoes num telemovel fisico."
+            --title "NEXUS JARVIS VOZ 1.6.1 — commands, reminders, research" \
+            --notes "Melhorias PT-PT: preserva acentos e pontuacao dos SMS ditados, aceita numeros de temporizadores por extenso e confirmacoes por voz. Beta debug-signed independente pt.nexus.jarvis.voice. Novidades: SMS com confirmacao por voz, comandos encadeados, ditado, alcunhas para contactos, agenda com confirmacao no Android, lembretes locais, fontes de noticias com atualizacao manual, receitas e pesquisa multi-fonte, ajustes de voz portuguesa. Os SMS requerem permissao e consentimento; WhatsApp pede envio na app. A pesquisa nao e garantida em tempo real e a fala/labios dependem do Android. Compilacao e testes automatizados passam, mas nao equivale a testes de todas as funcoes num telemovel fisico."
