@@ -13,7 +13,7 @@ let pending=null,taskQueue=[],paused=false,researching=false,sequence=0,lastRese
 const requests=new Map();
 const isText=t=>String(t||'').trim().length>0;
 const isYes=t=>/^(?:sim|sim envia|envia|podes enviar|pode enviar|confirmo|confirmado|esta certo|est[aá] certo|manda|autoriza|autorizo|sim por favor)$/.test(norm(t));
-const isNo=t=>/^(?:n[aã]o|nao envies|cancela|cancelar|nao|n[aã]o enviar|desiste|esquece|p[aá]ra|para)$/.test(norm(t));
+const isNo=t=>/^(?:(?:nao)(?:\s+(?:cancela|cancelar|envies|enviar|manda|por favor))?|cancela|cancelar|desiste|esquece|para|parar)$/.test(norm(t));
 const isEdit=t=>/^(?:altera|editar|corrige|muda|quero corrigir|reescrever|edita a mensagem)$/.test(norm(t));
 function say(value,spoken=true){
  const t=String(value||'').trim();
