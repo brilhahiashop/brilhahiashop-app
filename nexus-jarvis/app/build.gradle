@@ -7,11 +7,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId 'pt.nexus.jarvis.sms'
+        applicationId 'pt.nexus.jarvis.voice'
         minSdk 26
         targetSdk 34
-        versionCode 153
-        versionName '1.5.3'
+        versionCode 160
+        versionName '1.6.0'
     }
 
     buildTypes {

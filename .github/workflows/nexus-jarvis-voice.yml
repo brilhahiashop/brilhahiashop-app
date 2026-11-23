@@ -1,0 +1,64 @@
+name: NEXUS JARVIS VOZ 1.6.0 — Android build and voice regression
+on:
+  push:
+    branches: [nexus-jarvis-voice-automation]
+    paths: ['nexus-jarvis/**', '.github/workflows/nexus-jarvis-voice.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-jarvis-voice-v1.6.0
+  cancel-in-progress: true
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
+      - name: Test JavaScript and multi-action voice commands
+        run: |
+          node --check nexus-jarvis/app/src/main/assets/hud-upgrade.js
+          node --check nexus-jarvis/app/src/main/assets/human-face.js
+          node --check nexus-jarvis/app/src/main/assets/jarvis-operator.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('nexus-jarvis/app/src/main/assets/index.html').read_text()
+          js=re.findall(r'<script\b[^>]*>(.*?)</script\s*>',html,flags=re.I|re.S)
+          assert js,'Missing inline JS'
+          Path('/tmp/jarvis16-inline.js').write_text('\n'.join(js))
+          PY
+          node --check /tmp/jarvis16-inline.js
+          node --test nexus-jarvis/tests/*.test.cjs
+      - name: Compile Android and Android Lint
+        run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
+      - name: Prepare APK and checksum
+        run: |
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-VOZ-v1.6.0.apk
+          sha256sum NEXUS-JARVIS-VOZ-v1.6.0.apk > SHA256SUMS-VOZ-v1.6.0.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-JARVIS-VOZ-v1.6.0
+          path: |
+            NEXUS-JARVIS-VOZ-v1.6.0.apk
+            SHA256SUMS-VOZ-v1.6.0.txt
+          if-no-files-found: error
+      - name: Publish only after validations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create nexus-jarvis-v1.6.0-voz NEXUS-JARVIS-VOZ-v1.6.0.apk SHA256SUMS-VOZ-v1.6.0.txt \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "NEXUS JARVIS VOZ 1.6.0 — commands, reminders, research" \
+            --notes "Beta debug-signed independente pt.nexus.jarvis.voice. Novidades: SMS com confirmacao por voz, comandos encadeados, ditado, alcunhas para contactos, agenda com confirmacao no Android, lembretes locais, fontes de noticias com atualizacao manual, receitas e pesquisa multi-fonte, ajustes de voz portuguesa. Os SMS requerem permissao e consentimento; WhatsApp pede envio na app. A pesquisa nao e garantida em tempo real e a fala/labios dependem do Android. Compilacao e testes automatizados passam, mas nao equivale a testes de todas as funcoes num telemovel fisico."

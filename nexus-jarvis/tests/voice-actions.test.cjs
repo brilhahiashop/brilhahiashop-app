@@ -14,8 +14,9 @@ test('command calls Amor by alias',()=>{
  const i=subject().parse('Liga para Amor');
  assert.equal(i.type,'call');assert.equal(i.who,'amor');
 });
-test('command distinguishes torch from call',()=>{
- assert.equal(subject().parse('Liga a lanterna'),null);
+test('lanterna routes to device, not a contact call',()=>{
+ const intent=subject().parse('Liga a lanterna');
+ assert.equal(intent.type,'device');
 });
 test('WhatsApp command extracts recipient and dictated text',()=>{
  const i=subject().parse('Manda mensagem no WhatsApp para Amor a dizer chego às oito');
