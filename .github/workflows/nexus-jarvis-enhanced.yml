@@ -2,7 +2,7 @@ name: NEXUS JARVIS 1.5.2 humanoid APK
 on:
   push:
     branches: [nexus-jarvis-sms]
-    paths: ['nexus-jarvis/**', '.github/workflows/nexus-jarvis-sms.yml']
+    paths: ['nexus-jarvis/**', '.github/workflows/nexus-jarvis-enhanced.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -46,20 +46,20 @@ jobs:
       - name: Prepare APK and SHA256
         run: |
           cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-Android-v1.5.2.apk
-          sha256sum NEXUS-JARVIS-Android-v1.5.2.apk > SHA256SUMS-JARVIS-1.5.txt
+          sha256sum NEXUS-JARVIS-Android-v1.5.2.apk > SHA256SUMS-JARVIS-1.5.2.txt
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: NEXUS-JARVIS-APK-v1.5.2
           path: |
             NEXUS-JARVIS-Android-v1.5.2.apk
-            SHA256SUMS-JARVIS-1.5.txt
+            SHA256SUMS-JARVIS-1.5.2.txt
           if-no-files-found: error
       - name: Publish prerelease after validation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create nexus-jarvis-v1.5.2 NEXUS-JARVIS-Android-v1.5.2.apk SHA256SUMS-JARVIS-1.5.txt \
+          gh release create nexus-jarvis-v1.5.2 NEXUS-JARVIS-Android-v1.5.2.apk SHA256SUMS-JARVIS-1.5.2.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "NEXUS JARVIS Android 1.5.2 - human avatar and multi-action assistant" \
             --notes "NEXUS JARVIS 1.5.2 beta: mensagens genéricas passam a SMS por defeito, WhatsApp apenas quando explicitamente pedido. SMS nativo com confirmação no ecrã, permissão SEND_SMS e retorno de estado da rede; quando a permissão é bloqueada, abre Mensagens com rascunho para enviar manualmente. Mantém chamadas por alcunha, ditado, lembretes, pesquisa com fontes e avatar humanoide. Abertura do SMS sem texto após pedido de envio evita duplicação. Compilado com Android Lint e testes de comandos. SEND_SMS pode ser restringida pelo Android/instalador. Envio efetivo e motor de voz por testar em telemóvel físico. Versao de testes debug-signed."

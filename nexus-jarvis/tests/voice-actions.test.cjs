@@ -22,6 +22,29 @@ test('WhatsApp command extracts recipient and dictated text',()=>{
  assert.equal(i.type,'message');assert.equal(i.who,'amor');assert.equal(i.channel,'whatsapp');
  assert.match(i.body,/chego/);
 });
+test('generic dictated message goes to Android SMS, not WhatsApp',()=>{
+ const intent=subject().parse('Manda uma mensagem para Amor a dizer que estou a chegar');
+ assert.equal(intent.type,'message');
+ assert.equal(intent.who,'amor');
+ assert.equal(intent.channel,'sms');
+ assert.match(intent.body,/estou a chegar/);
+});
+test('WhatsApp remains available only when explicitly requested',()=>{
+ const intent=subject().parse('Envia WhatsApp para Amor a dizer chego daqui a cinco minutos');
+ assert.equal(intent.type,'message');
+ assert.equal(intent.channel,'whatsapp');
+});
+test('native SMS requires consent and uses Android Messages fallback',()=>{
+ const contacts=fs.readFileSync('nexus-jarvis/app/src/main/java/pt/nexus/jarvis/NexusContacts.java','utf8');
+ const manifest=fs.readFileSync('nexus-jarvis/app/src/main/AndroidManifest.xml','utf8');
+ assert.match(contacts,/AlertDialog\.Builder\(host\)\.setTitle\("NEXUS · Enviar SMS"\)/);
+ assert.match(contacts,/Manifest\.permission\.SEND_SMS/);
+ assert.match(contacts,/Intent\.ACTION_SENDTO/);
+ assert.match(contacts,/sms_body/);
+ assert.match(contacts,/SmsManager\.getDefault\(\)/);
+ assert.match(manifest,/android\.permission\.SEND_SMS/);
+ assert.match(manifest,/NexusSmsStatusReceiver/);
+});
 test('SMS command identifies channel',()=>{
  const i=subject().parse('Envia SMS para Maria a dizer olá');
  assert.equal(i.channel,'sms');assert.equal(i.who,'maria');
