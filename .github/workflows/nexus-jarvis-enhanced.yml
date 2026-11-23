@@ -46,20 +46,20 @@ jobs:
       - name: Prepare APK and SHA256
         run: |
           cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-SMS-v1.5.3-instalar-ao-lado.apk
-          sha256sum NEXUS-JARVIS-Android-v1.5.3.apk > SHA256SUMS-JARVIS-1.5.3.txt
+          sha256sum NEXUS-JARVIS-SMS-v1.5.3-instalar-ao-lado.apk > SHA256SUMS-JARVIS-1.5.3.txt
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: NEXUS-JARVIS-APK-v1.5.3
           path: |
-            NEXUS-JARVIS-Android-v1.5.3.apk
+            NEXUS-JARVIS-SMS-v1.5.3-instalar-ao-lado.apk
             SHA256SUMS-JARVIS-1.5.3.txt
           if-no-files-found: error
       - name: Publish prerelease after validation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create nexus-jarvis-v1.5.3 NEXUS-JARVIS-Android-v1.5.3.apk SHA256SUMS-JARVIS-1.5.3.txt \
+          gh release create nexus-jarvis-v1.5.3 NEXUS-JARVIS-SMS-v1.5.3-instalar-ao-lado.apk SHA256SUMS-JARVIS-1.5.3.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "NEXUS JARVIS SMS 1.5.3 - installs alongside 1.5.1" \
             --notes "VERSAO PARA INSTALAR AO LADO: identificador pt.nexus.jarvis.sms e nome NEXUS JARVIS SMS; preserva a instalacao 1.5.1 e respetivos dados, mas exige voltar a associar os contactos nesta nova app. NEXUS JARVIS 1.5.3 beta: mensagens genéricas passam a SMS por defeito, WhatsApp apenas quando explicitamente pedido. SMS nativo com confirmação no ecrã, permissão SEND_SMS e retorno de estado da rede; quando a permissão é bloqueada, abre Mensagens com rascunho para enviar manualmente. Mantém chamadas por alcunha, ditado, lembretes, pesquisa com fontes e avatar humanoide. Abertura do SMS sem texto após pedido de envio evita duplicação. Compilado com Android Lint e testes de comandos. SEND_SMS pode ser restringida pelo Android/instalador. Envio efetivo e motor de voz por testar em telemóvel físico. Versao de testes debug-signed."
