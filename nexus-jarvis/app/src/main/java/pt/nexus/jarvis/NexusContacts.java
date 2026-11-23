@@ -31,6 +31,9 @@ final class NexusContacts {
  private String awaitingNumber;
  private String awaitingSmsNumber,awaitingSmsBody;
  private boolean whatsappMode=false;
+ private boolean voiceSmsMode=false;
+ private String stagedSmsNumber,stagedSmsBody;
+ private long stagedSmsValidUntil;
  private Consumer<String> answer;
  NexusContacts(MainActivity host){this.host=host;}
  private static String normalize(String s){
@@ -70,7 +73,7 @@ final class NexusContacts {
   }catch(Exception e){Toast.makeText(host,"Não foi possível guardar o contacto.",Toast.LENGTH_LONG).show();}
  }
  void call(String target,Consumer<String> callback){
-  pendingAlias=canonical(target);pendingMessage=null;whatsappMode=false;answer=callback;
+  pendingAlias=canonical(target);pendingMessage=null;whatsappMode=false;voiceSmsMode=false;answer=callback;
   if(pendingAlias.length()<2){callback.accept("Diz o nome da pessoa a quem queres ligar.");return;}
   String known=read(pendingAlias);
   if(known.isEmpty())chooseContact();
@@ -97,10 +100,48 @@ final class NexusContacts {
 
  void compose(String target,String body,boolean whatsapp,Consumer<String> callback){
   answer=callback;pendingAlias=canonical(target);pendingMessage=body==null?"":body.trim();
-  whatsappMode=whatsapp;
+  whatsappMode=whatsapp;voiceSmsMode=false;
   if(pendingAlias.length()<2){callback.accept("Diz o nome do contacto.");return;}
   String digits=read(pendingAlias);
   if(digits.isEmpty())chooseContact();else composeMessage(digits);
+ }
+ /** Explicit voice-confirmation workflow. No SMS is dispatched at this stage. */
+ void prepareVoiceSms(String target,String body,Consumer<String> callback){
+  answer=callback;pendingAlias=canonical(target);
+  pendingMessage=body==null?"":body.trim();
+  whatsappMode=false;voiceSmsMode=true;
+  stagedSmsNumber=null;stagedSmsBody=null;stagedSmsValidUntil=0L;
+  if(pendingAlias.length()<2){callback.accept("Preciso do nome do destinatário.");return;}
+  if(pendingMessage.isEmpty()){callback.accept("Primeiro diz o texto da mensagem.");return;}
+  if(pendingMessage.length()>900){callback.accept("A mensagem é demasiado longa para SMS por voz.");return;}
+  String known=read(pendingAlias);
+  if(known.isEmpty())chooseContact();else voiceSmsReady(known);
+ }
+ private void voiceSmsReady(String number){
+  if(!voiceSmsMode||number==null||!number.replaceAll("[^0-9]","").matches("\\d{7,15}")){
+    if(answer!=null)answer.accept("Não foi possível preparar o SMS para esse contacto.");return;
+  }
+  voiceSmsMode=false;
+  stagedSmsNumber=number;
+  stagedSmsBody=pendingMessage;
+  stagedSmsValidUntil=android.os.SystemClock.elapsedRealtime()+120000L;
+  host.smsReadyEvent(pendingAlias,stagedSmsBody);
+ }
+ void confirmVoiceSms(boolean send){
+  String number=stagedSmsNumber,body=stagedSmsBody;
+  long expires=stagedSmsValidUntil;
+  stagedSmsNumber=null;stagedSmsBody=null;stagedSmsValidUntil=0L;
+  if(number==null||body==null||android.os.SystemClock.elapsedRealtime()>expires){
+    if(answer!=null)answer.accept("A confirmação expirou. Pede novamente o SMS.");return;
+  }
+  if(!send){if(answer!=null)answer.accept("SMS cancelado. Não enviei nenhuma mensagem.");return;}
+  sendSmsOrFallback(number,body);
+ }
+ void openVoiceSmsInMessages(){
+  String number=stagedSmsNumber,body=stagedSmsBody;
+  stagedSmsNumber=null;stagedSmsBody=null;stagedSmsValidUntil=0L;
+  if(number==null||body==null){if(answer!=null)answer.accept("Não há SMS preparado.");return;}
+  openSmsComposer(number,body);
  }
  private void chooseContact(){
   try{
@@ -110,7 +151,7 @@ final class NexusContacts {
   }catch(Exception e){answer.accept("Não consegui abrir os contactos. Confirma se tens uma aplicação de contactos instalada.");}
  }
  void onPicked(int result,Intent data){
-  if(result!=android.app.Activity.RESULT_OK||data==null||data.getData()==null){if(answer!=null)answer.accept("Não foi selecionado nenhum contacto.");return;}
+  if(result!=android.app.Activity.RESULT_OK||data==null||data.getData()==null){voiceSmsMode=false;if(answer!=null)answer.accept("Não foi selecionado nenhum contacto.");return;}
   String number=null;
   try(Cursor c=host.getContentResolver().query(data.getData(),
     new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},null,null,null)){
@@ -120,7 +161,9 @@ final class NexusContacts {
   String digits=number.replaceAll("[^\\d+]","");
   if(!digits.matches("\\+?\\d{7,15}")){if(answer!=null)answer.accept("Esse contacto não tem um número de telefone utilizável.");return;}
   save(pendingAlias,digits);
-  if(pendingMessage==null)confirmCall(digits);else composeMessage(digits);
+  if(pendingMessage==null)confirmCall(digits);
+  else if(voiceSmsMode)voiceSmsReady(digits);
+  else composeMessage(digits);
  }
  private void confirmCall(String number){
   String suffix=number.length()>3?number.substring(number.length()-3):number;

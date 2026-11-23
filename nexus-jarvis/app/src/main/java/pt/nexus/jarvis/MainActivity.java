@@ -146,6 +146,9 @@ public class MainActivity extends Activity {
         MainActivity activity=current.get();
         if(activity!=null)activity.status(message);
     }
+    void smsReadyEvent(String alias,String body){
+        js("window.nxSmsReady&&window.nxSmsReady("+JSONObject.quote(alias)+","+JSONObject.quote(body)+")");
+    }
     private void status(String message) {
         js("window.nxActionStatus&&window.nxActionStatus("+JSONObject.quote(message)+")");
     }
@@ -272,9 +275,18 @@ public class MainActivity extends Activity {
             runOnUiThread(()->{
                 if(personal==null){status("Contactos indisponíveis.");return;}
                 if("call".equals(kind))personal.call(alias,MainActivity.this::status);
+                else if("sms_voice".equals(kind))personal.prepareVoiceSms(alias,body,MainActivity.this::status);
                 else if("whatsapp".equals(kind)||"sms".equals(kind))
                     personal.compose(alias,body,"whatsapp".equals(kind),MainActivity.this::status);
             });
+        }
+        @JavascriptInterface public void confirmSms(boolean send) {
+            runOnUiThread(()->{
+                if(personal!=null)personal.confirmVoiceSms(send);
+            });
+        }
+        @JavascriptInterface public void openPreparedSms() {
+            runOnUiThread(()->{if(personal!=null)personal.openVoiceSmsInMessages();});
         }
         @JavascriptInterface public String createReminder(String title,long timestamp) {
             String reply=NexusReminders.add(MainActivity.this,title,timestamp);
