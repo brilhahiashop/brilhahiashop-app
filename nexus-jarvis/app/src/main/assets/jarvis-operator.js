@@ -47,7 +47,13 @@ function contact(text){
    .replace(/^(?:para|ao|a|o)\s+/,'');
   const marker=/\s+(?:a dizer(?: que)?|que diga|com o texto|com a mensagem|dizendo|com a frase|a falar que)\s+/.exec(t);
   let body='';
-  if(marker){body=t.slice(marker.index+marker[0].length).trim();t=t.slice(0,marker.index).trim();}
+  if(marker){
+   // Recipient matching is accent-insensitive; the SMS body retains the actual dictated accents and punctuation.
+   const original=strip(text);
+   const originalMarker=/\s+(?:a dizer(?: que)?|que diga|com o texto|com a mensagem|dizendo|com a frase|a falar que)\s+/i.exec(original);
+   body=originalMarker?original.slice(originalMarker.index+originalMarker[0].length).trim():t.slice(marker.index+marker[0].length).trim();
+   t=t.slice(0,marker.index).trim();
+  }
   const alias=contactAlias(t);
   if(!alias||alias.length>70)return null;
   return{type:'message',who:alias,body,channel};
@@ -65,9 +71,10 @@ const months=['janeiro','fevereiro','marco','abril','maio','junho','julho','agos
 const weekdays=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
 function when(text,now=new Date()){
  const s=norm(text);
- const relative=/\bdaqui a\s+(\d+)\s*(minutos?|horas?|dias?)\b/.exec(s);
+ const relative=/\bdaqui a\s+(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|vinte|trinta)\s*(minutos?|horas?|dias?)\b/.exec(s);
  if(relative){
-  const amount=Number(relative[1]),unit=relative[2].startsWith('minuto')?60000:relative[2].startsWith('hora')?3600000:86400000;
+  const amount=/^\d+$/.test(relative[1])?Number(relative[1]):numbers[relative[1]];
+  const unit=relative[2].startsWith('minuto')?60000:relative[2].startsWith('hora')?3600000:86400000;
   return amount>0&&amount<9999?now.getTime()+amount*unit:null;
  }
  const clock=/\b(?:as|pelas|para as|por volta das)\s+(\d{1,2}|uma|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezasseis|dezassete|dezoito|dezanove|vinte)(?:\s*(?::|h|horas?|e)\s*(\d{1,2}|meia|quinze|trinta|quarenta e cinco))?(?:\s+(?:da|de)\s+(manha|tarde|noite))?/.exec(s);
@@ -112,7 +119,7 @@ function when(text,now=new Date()){
 function removeDate(text){
  return String(text||'')
  .replace(/\b(?:depois de amanh[aã]|amanh[aã]|hoje)\b/gi,'')
- .replace(/\bdaqui a\s+\d+\s+(?:minutos?|horas?|dias?)\b/gi,'')
+ .replace(/\bdaqui a\s+(?:\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|quinze|vinte|trinta)\s+(?:minutos?|horas?|dias?)\b/gi,'')
  .replace(/\b(?:dia\s+\d{1,2}(?:\s+de\s+[a-zçáãéíóú]+)?(?:\s+de\s+\d{4})?)\b/gi,'')
  .replace(/\b(?:pr[oó]xima\s+)?(?:segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo)(?:-feira)?\b/gi,'')
  .replace(/\b(?:[àa]s|pelas|para as|por volta das)\s+(?:\d{1,2}|uma|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quinze|dezasseis|dezoito|vinte)(?:\s*(?::|h|horas?|e)\s*(?:\d{1,2}|meia|quinze|trinta|quarenta e cinco))?(?:\s+(?:da|de)\s+(?:manh[aã]|tarde|noite))?/gi,'')
@@ -210,6 +217,10 @@ window.nxSmsReady=(alias,body)=>{
 window.nxActionStatus=message=>{
  const txt=String(message||'');
  if(!txt)return;
+ if(pending&&pending.kind==='prepareSms'&&/não foi selecionado|n[aã]o consegui abrir os contactos|n[aã]o foi poss[ií]vel preparar|não tem um número/i.test(txt)){
+  pending=null;
+  pauseQueue();
+ }
  // The SMS network callback is informative, not proof of delivery.
  say(txt,/SMS|envi|falha|cancelad|permiss[aã]o|contacto/i.test(txt));
  if(/Abri a aplicação Mensagens|Abri o WhatsApp|A iniciar a chamada/i.test(txt))paused=true;

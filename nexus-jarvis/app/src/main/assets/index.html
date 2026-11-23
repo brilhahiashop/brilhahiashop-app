@@ -142,13 +142,18 @@ function phoneCmd(raw){
   const t=raw.toLowerCase().replace(/[?.!,]/g,' ').replace(/\s+/g,' ').trim();let m;
   if(/(desliga|apaga|desativa)\s+(a\s+)?lanterna/.test(t)){Android.torch(false);return'Lanterna desligada.'}
   if(/(liga|acende|ativa|põe)\s+(a\s+)?lanterna/.test(t)){Android.torch(true);return'Lanterna ligada.'}
+  if(/\b(?:alarme|despertador|acorda-?me)\b/.test(t)&&window.JarvisOperator){
+    const at=window.JarvisOperator.when(raw);
+    if(at){const d=new Date(at);Android.alarm(d.getHours(),d.getMinutes(),'NEXUS');return'Alarme marcado para as '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'.'}
+  }
   if((m=t.match(/(?:alarme|despertador|acorda-?me)\D*(\d{1,2})(?:\s*(?:h|horas?|:)\s*(\d{1,2}))?/))){
     let h=+m[1],mi=m[2]?+m[2]:(/ e meia/.test(t)?30:0);
     if(/da (tarde|noite)/.test(t)&&h<12)h+=12;
     if(h<24&&mi<60){Android.alarm(h,mi,'NEXUS');return'Alarme definido para as '+String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')+'.'}
   }
-  if((m=t.match(/(?:temporizador|timer|cron[óo]metro|contagem)\D*(\d+)\s*(segundos?|minutos?|horas?)/))){
-    const n=+m[1],u=m[2][0],s=u==='h'?n*3600:u==='m'?n*60:n;
+  if((m=t.match(/(?:temporizador|timer|cron[óo]metro|contagem)\D*(\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|quinze|vinte|trinta)\s*(segundos?|minutos?|horas?)/))){
+    const words={um:1,uma:1,dois:2,duas:2,'três':3,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,quinze:15,vinte:20,trinta:30};
+    const n=/^\d+$/.test(m[1])?Number(m[1]):words[m[1]],u=m[2][0],s=u==='h'?n*3600:u==='m'?n*60:n;
     Android.timer(s,'NEXUS');return'Temporizador definido para '+n+' '+m[2]+'.'}
   if((m=t.match(/\b(?:liga|ligar|telefona|chama)\b.*?((?:\d\s?){9,})/))){
     const d=m[1].replace(/\D/g,'');Android.dial(d);return'A abrir o marcador com o número '+d.split('').join(' ')+'. Confirme a chamada no ecrã.'}
