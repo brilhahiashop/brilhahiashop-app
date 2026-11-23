@@ -129,23 +129,37 @@ final class NexusResearch {
   return r;
  }
  private static Result meals(String q){
-  Result r=new Result(q);Set<String> used=new HashSet<>();
+  Result result=new Result(q);Set<String> used=new HashSet<>();
   try{
-   String v=norm(q);
-   String term=v.matches(".*\\b(frango|galinha)\\b.*")?"chicken":
-    v.matches(".*\\b(arroz)\\b.*")?"rice":
-    v.matches(".*\\b(bacalhau|peixe|salmao)\\b.*")?"fish":
-    v.matches(".*\\b(bolo|sobremesa)\\b.*")?"cake":"pasta";
-   JSONObject d=new JSONObject(new String(fetch("https://www.themealdb.com/api/json/v1/1/search.php?s="+Uri.encode(term),300000),StandardCharsets.UTF_8));
-   JSONArray rows=d.optJSONArray("meals");
-   if(rows!=null)for(int i=0;i<rows.length()&&i<4;i++){
-    JSONObject meal=rows.getJSONObject(i),x=meal;
-    String link=x.optString("strSource");
-    if(!safeLink(link))link="https://www.themealdb.com/meal/"+x.optString("idMeal");
-    put(r,"Receita: "+x.optString("strMeal"),link,x.optString("strInstructions"),null,used);
+   String query=norm(q);
+   // Generic ingredient lookups only: never substitute an unrelated meal for a named dish.
+   String t=query.replaceAll("\\b(receita|receitas|de|do|da|como|fazer|preparar|cozinhar|um|uma|os|as|com)\\b","").trim();
+   String term=null;
+   if(t.matches(".*\\b(frango|galinha)\\b.*"))term="chicken";
+   else if(t.matches(".*\\b(bacalhau)\\b.*"))term="cod";
+   else if(t.matches(".*\\b(salmao)\\b.*"))term="salmon";
+   else if(t.matches(".*\\b(arroz)\\b.*"))term="rice";
+   else if(t.matches(".*\\b(bolo)\\b.*"))term="cake";
+   else if(t.matches(".*\\b(lasanha)\\b.*"))term="lasagne";
+   else if(t.matches(".*\\b(sopa)\\b.*"))term="soup";
+   else if(t.matches(".*\\b(omelete|ovos)\\b.*"))term="omelette";
+   else if(t.matches(".*\\b(peixe)\\b.*"))term="fish";
+   else if(t.matches(".*\\b(batata)\\b.*"))term="potato";
+   else if(t.matches(".*\\b(carne|vaca)\\b.*"))term="beef";
+   else if(t.matches(".*\\b(peru)\\b.*"))term="turkey";
+   else if(t.matches(".*\\b(massa)\\b.*"))term="pasta";
+   if(term==null)return result;
+   JSONObject data=new JSONObject(new String(fetch("https://www.themealdb.com/api/json/v1/1/search.php?s="+Uri.encode(term),300000),StandardCharsets.UTF_8));
+   JSONArray rows=data.optJSONArray("meals");
+   if(rows!=null)for(int i=0;i<rows.length()&&i<3;i++){
+    JSONObject meal=rows.optJSONObject(i);if(meal==null)continue;
+    String title=meal.optString("strMeal");
+    String link=meal.optString("strSource");
+    if(!safeLink(link))link="https://www.themealdb.com/meal/"+meal.optString("idMeal");
+    put(result,"Receita: "+title,link,meal.optString("strInstructions"),null,used);
    }
   }catch(Exception ignored){}
-  return r;
+  return result;
  }
  static boolean shouldLookup(String utterance){
   String q=norm(utterance);
@@ -166,7 +180,7 @@ final class NexusResearch {
  private static boolean isNews(String q){
   return norm(q).matches(".*\\b(noticias|noticia|noticiario|ultimas|jornal|atualidade|manchetes)\\b.*");
  }
- private static boolean isRecipe(String q){return norm(q).matches(".*\\b(receita|receitas|cozinhar|bolo|frango|arroz|peixe|bacalhau|comida)\\b.*");}
+ private static boolean isRecipe(String q){return norm(q).matches(".*\\b(receita|receitas|cozinhar|preparar|ingredientes|culinaria|bolo|frango|arroz|peixe|bacalhau|lasanha|omelete|sopa|massa|comida)\\b.*");}
  static Result search(String request){return search(request,false);}
  static Result search(String request,boolean forceRefresh){
   String q=bound(request==null?"":request.trim(),230);

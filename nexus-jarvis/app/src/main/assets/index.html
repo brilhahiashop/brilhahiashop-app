@@ -116,7 +116,12 @@ function netFetch(url,opts){
 }
 window.nx={
   net(id,st,b){const p=pend[id];if(!p)return;delete pend[id];p(st,b)},
-  ttsDone(){setState('idle','Toque no orbe e fale comigo.');if(hands&&!busy)setTimeout(listen,500)},
+  ttsDone(){
+    setState('idle','NEXUS disponível.');
+    if(window.JarvisOperator&&window.JarvisOperator.onSpeechDone())return;
+    const waiting=!!(window.JarvisOperator&&window.JarvisOperator.needsAnswer());
+    if((hands||waiting)&&!busy&&!listening)setTimeout(listen,500);
+  },
   stt(type,txt){
     if(type==='ready'){listening=true;setState('listening','A ouvir…')}
     else if(type==='partial'){cap('«'+txt+'»');if(window.nxHUD)window.nxHUD.liveText(txt)}
@@ -137,7 +142,7 @@ function phoneCmd(raw){
   const t=raw.toLowerCase().replace(/[?.!,]/g,' ').replace(/\s+/g,' ').trim();let m;
   if(/(desliga|apaga|desativa)\s+(a\s+)?lanterna/.test(t)){Android.torch(false);return'Lanterna desligada.'}
   if(/(liga|acende|ativa|põe)\s+(a\s+)?lanterna/.test(t)){Android.torch(true);return'Lanterna ligada.'}
-  if((m=t.match(/(?:alarme|acorda-?me)\D*(\d{1,2})(?:\s*(?:h|horas?|:)\s*(\d{1,2}))?/))){
+  if((m=t.match(/(?:alarme|despertador|acorda-?me)\D*(\d{1,2})(?:\s*(?:h|horas?|:)\s*(\d{1,2}))?/))){
     let h=+m[1],mi=m[2]?+m[2]:(/ e meia/.test(t)?30:0);
     if(/da (tarde|noite)/.test(t)&&h<12)h+=12;
     if(h<24&&mi<60){Android.alarm(h,mi,'NEXUS');return'Alarme definido para as '+String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')+'.'}
@@ -189,7 +194,7 @@ const store={
 const cfg={url:store.get('url','https://gen.pollinations.ai/v1/chat/completions'),model:store.get('model','openai'),key:store.get('key','')};
 let hands=store.get('hands','0')==='1',busy=false,listening=false,rec=null,history=[];
 
-const SYS=`És o NEXUS, um assistente pessoal por voz. Responde sempre em português de Portugal (pt-PT), nunca em português do Brasil, com tom formal e respeitoso. As respostas devem ser detalhadas e bem explicadas, mas escritas para serem ditas em voz alta: sem markdown, sem asteriscos, sem listas com símbolos, em frases claras. Ajudas o utilizador a melhorar a sua vida financeira e a escolher e montar um negócio próprio, preferindo sempre soluções gratuitas ou de custo muito baixo. Se não souberes algo, di-lo com honestidade em vez de inventar.`;
+const SYS=`És o NEXUS, um assistente pessoal polivalente por voz. Responde em português de Portugal (pt-PT), com linguagem natural, clara, não robótica e adequada para ouvir. Responde diretamente ao pedido; evita discursos desnecessários e listas longas. Para notícias e factos recentes, fundamenta nas fontes fornecidas pela aplicação e não inventes datas, manchetes ou acontecimentos. Para receitas, oferece ingredientes e preparação com medidas quando os dados forem fiáveis; distingue receitas sugeridas de receitas verificadas. Não afirmes que executaste chamadas, enviaste SMS ou agendaste eventos sem retorno confirmado do Android. Os comandos do telemóvel e dados de contactos não devem ser enviados à IA remota. Se não souberes, explica-o.`;
 
 /* ---------- estado visual ---------- */
 function setState(s,msg){$('#orb').className='orb '+(s==='idle'?'':s);if(msg!==undefined)$('#cap').textContent=msg;if(window.nxHUD)window.nxHUD.state(s,msg)}
