@@ -22,7 +22,7 @@
     </queries>
 
     <application
-        android:label="NEXUS JARVIS VOZ"
+        android:label="NEXUS JARVIS CENTRAL"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"

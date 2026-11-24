@@ -14,7 +14,7 @@ import javax.crypto.spec.GCMParameterSpec;
 /** AES-256-GCM, Android Keystore, separate encrypted records for each token. */
 final class SecretStore {
     private static final String ALIAS="nexus-jarvis-v1";
-    private static boolean allowed(String s){return "stoken".equals(s)||"key".equals(s);}
+    private static boolean allowed(String s){return "stoken".equals(s)||"key".equals(s)||"geminiKey".equals(s);}
     private static SecretKey getKey() throws Exception {
         KeyStore ks=KeyStore.getInstance("AndroidKeyStore");ks.load(null);
         if(!ks.containsAlias(ALIAS)){

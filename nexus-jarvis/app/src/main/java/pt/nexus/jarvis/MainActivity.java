@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
     private boolean ttsReady = false;
     private boolean torchOn = false;
     private NexusContacts personal;
+    private NexusGmail gmail;
     private static java.lang.ref.WeakReference<MainActivity> current=new java.lang.ref.WeakReference<>(null);
     private volatile boolean webReady = false;
     private volatile boolean greeted = false;
@@ -62,6 +63,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         personal = new NexusContacts(this);
+        gmail = new NexusGmail(this);
         current=new java.lang.ref.WeakReference<>(this);
         getWindow().setStatusBarColor(0xFF070B14);
         getWindow().setNavigationBarColor(0xFF070B14);
@@ -153,12 +155,16 @@ public class MainActivity extends Activity {
     void smsReadyEvent(String alias,String body){
         js("window.nxSmsReady&&window.nxSmsReady("+JSONObject.quote(alias)+","+JSONObject.quote(body)+")");
     }
+    void emitMailEvent(String type,JSONObject data){
+        js("window.nxMailEvent&&window.nxMailEvent("+JSONObject.quote(type)+","+data.toString()+")");
+    }
     private void status(String message) {
         js("window.nxActionStatus&&window.nxActionStatus("+JSONObject.quote(message)+")");
     }
     @Override @SuppressWarnings("deprecation")
     protected void onActivityResult(int request,int result,Intent data) {
         super.onActivityResult(request,result,data);
+        if(gmail!=null&&gmail.onActivityResult(request,result,data))return;
         if(request==NexusContacts.PICK_CONTACT&&personal!=null)personal.onPicked(result,data);
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
@@ -243,6 +249,33 @@ public class MainActivity extends Activity {
 
     /* ---------- ponte JS <-> Android ---------- */
     private class Bridge {
+        @JavascriptInterface public String gmailAccounts(){
+            return gmail==null?"[]":gmail.accounts();
+        }
+        @JavascriptInterface public boolean gmailAutoBills(){
+            return gmail!=null&&gmail.autoBills();
+        }
+        @JavascriptInterface public void gmailAutoBillsSet(boolean enabled){
+            runOnUiThread(()->{if(gmail!=null)gmail.setAutoBills(enabled);});
+        }
+        @JavascriptInterface public void gmailConnect(int slot){
+            runOnUiThread(()->{if(gmail!=null)gmail.connect(slot);});
+        }
+        @JavascriptInterface public void gmailScanAll(){
+            runOnUiThread(()->{if(gmail!=null)gmail.scanAll();});
+        }
+        @JavascriptInterface public void gmailScanSpam(int slot){
+            runOnUiThread(()->{if(gmail!=null)gmail.scanSpam(slot);});
+        }
+        @JavascriptInterface public void gmailRead(int slot,String id){
+            runOnUiThread(()->{if(gmail!=null)gmail.readOne(slot,id);});
+        }
+        @JavascriptInterface public void gmailTrash(int slot,String id){
+            runOnUiThread(()->{if(gmail!=null)gmail.trashOne(slot,id);});
+        }
+        @JavascriptInterface public void gmailRemoveAccount(int slot){
+            runOnUiThread(()->{if(gmail!=null)gmail.remove(slot);});
+        }
         @JavascriptInterface public String socialNotifications(){
             return NexusSocialListener.status(MainActivity.this).toString();
         }
