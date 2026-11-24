@@ -43,7 +43,9 @@ function draw(panel){
  const options=node('div',null,'row');
  options.append(button('Ler 3 contas',()=>{Android.gmailScanAll();message('A consultar as contas autorizadas…')}));
  options.append(button('Ver resumo',()=>renderSummary()));
- options.append(button('Ler spam (conta 1)',()=>{Android.gmailScanSpam(0);message('A verificar a pasta de spam da primeira conta.')})); 
+ list.filter(x=>x.email).forEach(x=>options.append(button('Spam · '+(x.slot+1),()=>{
+  Android.gmailScanSpam(x.slot);message('A verificar o spam da conta '+(x.slot+1)+'.');
+ }))); 
  panel.append(options);
  const label=node('label','Agendar lembretes de possíveis faturas com data de vencimento clara. Nunca efetuar pagamentos.');
  const check=node('input');check.type='checkbox';check.checked=!!Android.gmailAutoBills();
@@ -190,6 +192,7 @@ function parse(text){
      &&/\b(?:email|emails|e mails|correio|caixa de entrada|faturas? para pagar|mensagens importantes|spam)\b/.test(n))
     return {type:'email'};
  if(/^(?:faturas? para pagar|emails importantes|correio importante|limpa spam|limpar spam|apagar spam)$/.test(n))return {type:'email'};
+ if(/(?:de quem (?:sao|vieram)|quem (?:enviou|mandou)|quais (?:sao|foram) os importantes).*(?:email|correio|fatura|mensagem)/.test(n))return {type:'email'};
  return null;
 }
 function handle(text){
