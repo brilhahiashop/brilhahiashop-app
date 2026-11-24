@@ -243,6 +243,16 @@ public class MainActivity extends Activity {
 
     /* ---------- ponte JS <-> Android ---------- */
     private class Bridge {
+        @JavascriptInterface public String socialNotifications(){
+            return NexusSocialListener.status(MainActivity.this).toString();
+        }
+        @JavascriptInterface public void enableSocialNotifications(){
+            runOnUiThread(()->{
+                try{startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));}
+                catch(Exception e){status("Não consegui abrir o acesso às notificações.");}
+            });
+        }
+
         @JavascriptInterface public String loadSecret(String slot) {
             return SecretStore.read(MainActivity.this, slot);
         }
