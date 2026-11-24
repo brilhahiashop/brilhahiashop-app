@@ -297,7 +297,7 @@ function run(action){
  if(!action)return false;
  lastKind=action.type;
  if(action.type==='email'||action.type==='social'){
-  return window.NexusMail?window.NexusMail.handle(action.phrase||action.query||'verifica emails'):false;
+  return window.NexusMail?window.NexusMail.handle(action.type==='social'?'tenho notificações nas redes sociais':'verifica emails'):false;
  }
  if(action.type==='call'){
   pauseQueue();if(window.nxHUD)window.nxHUD.request('Ligar para '+action.who);
