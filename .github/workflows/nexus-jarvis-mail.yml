@@ -1,0 +1,65 @@
+name: NEXUS JARVIS 1.7 Gmail, notificacoes sociais e IA
+on:
+  push:
+    branches: [nexus-jarvis-mail-inbox]
+    paths: ['nexus-jarvis/**', '.github/workflows/nexus-jarvis-mail.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-jarvis-mail-1.7
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
+      - name: JavaScript syntax and regression tests
+        run: |
+          node --check nexus-jarvis/app/src/main/assets/human-face.js
+          node --check nexus-jarvis/app/src/main/assets/hud-upgrade.js
+          node --check nexus-jarvis/app/src/main/assets/jarvis-operator.js
+          node --check nexus-jarvis/app/src/main/assets/comms-center.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('nexus-jarvis/app/src/main/assets/index.html').read_text()
+          scripts=re.findall(r'<script\b[^>]*>(.*?)</script\s*>',html,flags=re.I|re.S)
+          assert scripts,'Missing inline app JavaScript'
+          Path('/tmp/nexus-mail-ui.js').write_text('\n'.join(scripts))
+          PY
+          node --check /tmp/nexus-mail-ui.js
+          node --test nexus-jarvis/tests/*.test.cjs
+      - name: Compile and Android Lint
+        run: gradle -p nexus-jarvis :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
+      - name: Package APK and hash
+        run: |
+          cp nexus-jarvis/app/build/outputs/apk/debug/app-debug.apk NEXUS-JARVIS-CENTRAL-v1.7.0.apk
+          sha256sum NEXUS-JARVIS-CENTRAL-v1.7.0.apk > SHA256SUMS-CENTRAL-v1.7.0.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-JARVIS-CENTRAL-v1.7.0
+          path: |
+            NEXUS-JARVIS-CENTRAL-v1.7.0.apk
+            SHA256SUMS-CENTRAL-v1.7.0.txt
+          if-no-files-found: error
+      - name: Publish experimental release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create nexus-jarvis-v1.7.0-central NEXUS-JARVIS-CENTRAL-v1.7.0.apk SHA256SUMS-CENTRAL-v1.7.0.txt \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "NEXUS JARVIS CENTRAL 1.7.0 — Email, redes sociais e IA" \
+            --notes "Beta independente pt.nexus.jarvis.mail. Gmail ate 3 contas Google via Play Services e escopos OAuth restritos; exige registo do pacote e SHA-1 no projeto Google Cloud e autorizacao individual. Resumos de remetentes, importantes, possiveis faturas, lembretes opt-in com datas claras e exclusao apenas apos confirmacao, para Lixo recuperavel. Contagem de notificacoes Android de redes sociais sem ler conteudo; requer acesso Android explicito e nao equivale ao numero de mensagens nao lidas. IA alternativa Gemini configuravel com chave propria Android Keystore; corrige explicacao de HTTP 402 Pollinations. Mantem humanoide, voz, chamadas, SMS, lembretes e pesquisa. CI compila e valida JS/Lint; Gmail OAuth real, notificacoes e TTS nao foram verificados em telemovel fisico. APK debug-signed; nao substitui apps anteriores."
