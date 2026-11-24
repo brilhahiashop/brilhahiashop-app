@@ -172,7 +172,7 @@ function weather(text){
   return{type:'weather',query:strip(text)};
  return null;
 }
-function parse(text){return contact(text)||reminder(text)||calendar(text)||weather(text)||searchIntent(text)||device(text)}
+function parse(text){return (window.NexusMail&&window.NexusMail.parse(text))||contact(text)||reminder(text)||calendar(text)||weather(text)||searchIntent(text)||device(text)}
 function splitActions(text){
  const parts=strip(text).split(/\s+(?:e depois|de seguida|e a seguir|depois disso|a seguir)\s+/i).map(x=>x.trim()).filter(Boolean);
  return parts.length>MAX_STEPS?[strip(text)]:parts;
@@ -296,6 +296,9 @@ async function weatherNow(text){
 function run(action){
  if(!action)return false;
  lastKind=action.type;
+ if(action.type==='email'||action.type==='social'){
+  return window.NexusMail?window.NexusMail.handle(action.phrase||action.query||'verifica emails'):false;
+ }
  if(action.type==='call'){
   pauseQueue();if(window.nxHUD)window.nxHUD.request('Ligar para '+action.who);
   Android.contactAction('call',action.who,'');return true;
@@ -381,6 +384,7 @@ function handle(value){
   else say('Diz o tema que queres pesquisar primeiro.');
   return true;
  }
+ if(window.NexusMail&&window.NexusMail.handle(text))return true;
  const parts=splitActions(text);
  const all=parts.map(parse);
  if(!all[0])return false;

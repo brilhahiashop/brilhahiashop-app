@@ -181,7 +181,7 @@ function phoneCmd(raw){
 /* Token Shopify e chave de IA cifrados em repouso no Android Keystore. */
 const store={
  get(k,d){try{
-   if(NATIVE&&(k==='stoken'||k==='key')){
+   if(NATIVE&&(k==='stoken'||k==='key'||k==='geminiKey')){
      const safe=Android.loadSecret(k);if(safe)return safe;
      const legacy=localStorage.getItem(k);
      if(legacy&&Android.storeSecret(k,legacy)){localStorage.removeItem(k);return legacy}
@@ -190,13 +190,20 @@ const store={
    const v=localStorage.getItem(k);return v===null?d:v;
  }catch(e){return d}},
  set(k,v){try{
-   if(NATIVE&&(k==='stoken'||k==='key')){
+   if(NATIVE&&(k==='stoken'||k==='key'||k==='geminiKey')){
      const ok=Android.storeSecret(k,String(v));if(ok)localStorage.removeItem(k);return ok;
    }
    localStorage.setItem(k,v);return true;
  }catch(e){return false}}
 };
-const cfg={url:store.get('url','https://gen.pollinations.ai/v1/chat/completions'),model:store.get('model','openai'),key:store.get('key','')};
+const cfg={
+ url:store.get('url','https://gen.pollinations.ai/v1/chat/completions'),
+ model:store.get('model','openai'),
+ key:store.get('key',''),
+ provider:store.get('provider','pollinations'),
+ geminiModel:store.get('geminiModel','gemini-2.5-flash'),
+ geminiKey:store.get('geminiKey','')
+};
 let hands=store.get('hands','0')==='1',busy=false,listening=false,rec=null,history=[];
 
 const SYS=`És o NEXUS, um assistente pessoal polivalente por voz. Responde em português de Portugal (pt-PT), com linguagem natural, clara, não robótica e adequada para ouvir. Responde diretamente ao pedido; evita discursos desnecessários e listas longas. Para notícias e factos recentes, fundamenta nas fontes fornecidas pela aplicação e não inventes datas, manchetes ou acontecimentos. Para receitas, oferece ingredientes e preparação com medidas quando os dados forem fiáveis; distingue receitas sugeridas de receitas verificadas. Não afirmes que executaste chamadas, enviaste SMS ou agendaste eventos sem retorno confirmado do Android. Os comandos do telemóvel e dados de contactos não devem ser enviados à IA remota. Se não souberes, explica-o.`;
@@ -280,18 +287,56 @@ function weatherWin(wd,answer){
 }
 
 /* ---------- IA gratuita (Pollinations) ---------- */
+async function callGemini(messages){
+ if(!cfg.geminiKey)throw new Error('Falta a chave do Gemini. Abre Definições da IA e configura uma chave do Google AI Studio.');
+ const model=cfg.geminiModel.trim();
+ if(!/^[a-zA-Z0-9_.-]+$/.test(model))throw new Error('Nome de modelo Gemini inválido.');
+ const sys=messages.filter(m=>m.role==='system').map(m=>m.content).join('\n');
+ const contents=messages.filter(m=>m.role!=='system').map(m=>({
+  role:m.role==='assistant'?'model':'user',parts:[{text:String(m.content||'')}]
+ }));
+ if(!contents.length)throw new Error('Pergunta vazia.');
+ const response=await netFetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-goog-api-key':cfg.geminiKey},
+   body:JSON.stringify({
+      systemInstruction:{parts:[{text:sys||'Responde em português europeu.'}]},
+      contents,
+      generationConfig:{temperature:.55,maxOutputTokens:1150}
+   })
+ });
+ if(!response.ok){
+  if(response.status===401||response.status===403)throw new Error('A chave Gemini não foi autorizada. Confirma a chave e o acesso à API.');
+  if(response.status===429)throw new Error('O Gemini atingiu o limite gratuito ou de pedidos. Tenta mais tarde.');
+  if(response.status===404)throw new Error('O modelo Gemini escolhido não está disponível para esta chave. Altera o modelo nas Definições.');
+  throw new Error('Falha no serviço Gemini (HTTP '+response.status+').');
+ }
+ const out=await response.json();
+ const answer=(out.candidates||[]).flatMap(c=>(c.content&&c.content.parts||[]).map(p=>p.text||'')).join('\n').trim();
+ if(!answer)throw new Error('O Gemini não devolveu texto para esta pergunta.');
+ return answer;
+}
 async function callAI(messages){
-  const eps=[cfg.url,'https://text.pollinations.ai/openai'];let err;
-  for(const u of eps){
-    try{
-      const h={'Content-Type':'application/json'};if(cfg.key&&u===cfg.url)h.Authorization='Bearer '+cfg.key;
-      const r=await netFetch(u,{method:'POST',headers:h,body:JSON.stringify({model:cfg.model,messages})});
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const d=await r.json();const c=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
-      if(c)return c.trim();throw new Error('resposta vazia');
-    }catch(e){err=e}
-  }
-  throw err;
+ if(cfg.provider==='gemini')return callGemini(messages);
+ const endpoint=cfg.url.trim();
+ if(!/^https:\/\//i.test(endpoint))throw new Error('A ligação à IA deve utilizar HTTPS.');
+ const headers={'Content-Type':'application/json'};
+ if(cfg.key)headers.Authorization='Bearer '+cfg.key;
+ let response;
+ try{
+  response=await netFetch(endpoint,{method:'POST',headers,body:JSON.stringify({model:cfg.model,messages})});
+ }catch(e){if(cfg.geminiKey)return callGemini(messages);throw new Error('O serviço de IA não respondeu. As funções locais continuam disponíveis.')}
+ if(!response.ok){
+  if((response.status===402||response.status===429)&&cfg.geminiKey)return callGemini(messages);
+  if(response.status===402)throw new Error('O fornecedor Pollinations esgotou o saldo ou limite de uso (HTTP 402). Para continuar sem esse bloqueio, configura uma chave Gemini nas Definições.');
+  if(response.status===401||response.status===403)throw new Error('O fornecedor de IA exige autorização. Confirma a chave nas Definições.');
+  if(response.status===429)throw new Error('O fornecedor de IA atingiu o limite de pedidos. Tenta mais tarde ou usa o Gemini nas Definições.');
+  throw new Error('O serviço de IA não respondeu (HTTP '+response.status+').');
+ }
+ const body=await response.json();
+ const answer=body.choices&&body.choices[0]&&body.choices[0].message&&body.choices[0].message.content;
+ if(!answer||!String(answer).trim())throw new Error('A IA não devolveu uma resposta válida.');
+ return String(answer).trim();
 }
 
 /* ---------- intenção -> janela ---------- */
@@ -391,10 +436,19 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
   f('s-key','Chave (opcional, se o serviço a exigir)',cfg.key,'password');
   f('s-shop','Loja Shopify (ex.: minhaloja.myshopify.com)',store.get('shop',''));
   f('s-stoken','Token de acesso da Shopify (só leitura de encomendas)',store.get('stoken',''),'password');
+  const providerLabel=el('label','Motor de IA para perguntas gerais');providerLabel.htmlFor='s-provider';
+  const select=el('select');select.id='s-provider';select.style.cssText='display:block;width:100%;padding:10px;background:#112542;color:white;';
+  for(const [id,name] of [['pollinations','Pollinations (necessita de saldo/autorização)'],['gemini','Google Gemini (chave própria)']]){
+    const option=el('option',name);option.value=id;option.selected=cfg.provider===id;select.append(option);
+  }
+  b.append(providerLabel,select);
+  f('s-geminiModel','Modelo Gemini (configurável)',cfg.geminiModel);
+  f('s-geminiKey','Chave Google AI Studio (guardada com cifragem Android)',cfg.geminiKey,'password');
+  b.append(el('p','O HTTP 402 significa saldo ou limite esgotado no Pollinations. O Gemini só funciona depois de obteres uma chave válida e pode ter limites próprios.'));
   if(window.JarvisOperator)window.JarvisOperator.addSettings(b);
   const r=el('div',null,'row');r.style.marginTop='16px';
   const s=el('button','Guardar');
-  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);const aiSaved=store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());const shopSaved=store.set('stoken',$('#s-stoken').value.trim());if(!aiSaved||!shopSaved){b.append(el('p','Não foi possível guardar a chave em segurança. Verifique o Android Keystore e tente novamente.'));return;}closeWin()};
+  s.onclick=()=>{cfg.url=$('#s-url').value.trim()||cfg.url;cfg.model=$('#s-model').value.trim()||cfg.model;cfg.key=$('#s-key').value.trim();store.set('url',cfg.url);store.set('model',cfg.model);const aiSaved=store.set('key',cfg.key);store.set('shop',$('#s-shop').value.trim());const shopSaved=store.set('stoken',$('#s-stoken').value.trim());cfg.provider=$('#s-provider').value;cfg.geminiModel=$('#s-geminiModel').value.trim()||'gemini-2.5-flash';cfg.geminiKey=$('#s-geminiKey').value.trim();store.set('provider',cfg.provider);store.set('geminiModel',cfg.geminiModel);const geminiSaved=store.set('geminiKey',cfg.geminiKey);if(!aiSaved||!shopSaved||!geminiSaved){b.append(el('p','Não foi possível guardar a chave em segurança. Verifique o Android Keystore e tente novamente.'));return;}closeWin()};
   const n=el('button','Limpar conversa');n.onclick=()=>{history=[];closeWin();cap('Conversa limpa.')};
   r.append(s,n);b.append(r);
 });
@@ -402,5 +456,6 @@ $('#gear').onclick=()=>showWin('Definições',b=>{
 <script src="hud-upgrade.js"></script>
 <script src="human-face.js"></script>
 <script src="jarvis-operator.js"></script>
+<script src="comms-center.js"></script>
 </body>
 </html>
