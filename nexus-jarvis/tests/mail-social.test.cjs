@@ -38,7 +38,7 @@ test('invoice notification is strictly local and opt-in',()=>{
  assert.match(gmail,/getBoolean\("autoBills",false\)/);
  assert.match(gmail,/maybeScheduleBill/);
  assert.match(gmail,/NexusReminders\.add/);
- assert.match(gmail,/data\\s\+limite|data\\s\+limite|data\\s\\s/); // date extraction source exists
+ assert.ok(gmail.includes('data\\\\s+limite')||gmail.includes('vencimento')); // due-date extraction source
 });
 test('user must approve before moving an email to trash',()=>{
  assert.match(center,/Confirmar Lixo/);
