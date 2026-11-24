@@ -169,7 +169,9 @@ final class NexusGmail {
                     send("trashed",new JSONObject().put("slot",slot).put("id",id),"Email movido para o Lixo do Gmail. Pode ser recuperado durante o prazo definido pelo Gmail.");
                 }
             }catch(Exception e){
-                send("error",new JSONObject().put("slot",slot),shortError(e.getMessage()));
+                JSONObject info=new JSONObject();
+                try{info.put("slot",slot);}catch(Exception ignored){}
+                send("error",info,shortError(e.getMessage()));
             }finally{
                 host.runOnUiThread(()->{
                     activeSlot=-1;action="";messageId="";
